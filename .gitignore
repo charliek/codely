@@ -1,0 +1,15 @@
+# Binaries
+codely
+
+# Logs
+*.log
+
+# Editor/OS
+.DS_Store
+
+# Go build/test artifacts
+/bin/
+/dist/
+/tmp/
+coverage.*
+*.test

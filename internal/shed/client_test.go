@@ -1,0 +1,108 @@
+package shed
+
+import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestMockClient(t *testing.T) {
+	m := NewMockClient()
+
+	assert.True(t, m.Available())
+	assert.Len(t, m.Calls, 1)
+	assert.Equal(t, "Available", m.Calls[0].Method)
+}
+
+func TestMockClientListSheds(t *testing.T) {
+	m := NewMockClient()
+	m.ListShedsResult = []Shed{
+		{Name: "test-shed", Server: "mini-desktop", Status: "running"},
+		{Name: "other-shed", Server: "cloud-vps", Status: "stopped"},
+	}
+
+	sheds, err := m.ListSheds()
+
+	assert.NoError(t, err)
+	assert.Len(t, sheds, 2)
+	assert.Equal(t, "test-shed", sheds[0].Name)
+	assert.Equal(t, "running", sheds[0].Status)
+}
+
+func TestMockClientCreateShed(t *testing.T) {
+	m := NewMockClient()
+
+	err := m.CreateShed("new-shed", CreateOpts{
+		Repo:   "user/repo",
+		Server: "mini-desktop",
+	})
+
+	assert.NoError(t, err)
+	assert.Len(t, m.Calls, 1)
+	assert.Equal(t, "CreateShed", m.Calls[0].Method)
+	assert.Equal(t, "new-shed", m.Calls[0].Args[0])
+}
+
+func TestMockClientStartStop(t *testing.T) {
+	m := NewMockClient()
+
+	err := m.StartShed("test-shed")
+	assert.NoError(t, err)
+
+	err = m.StopShed("test-shed")
+	assert.NoError(t, err)
+
+	assert.Len(t, m.Calls, 2)
+	assert.Equal(t, "StartShed", m.Calls[0].Method)
+	assert.Equal(t, "StopShed", m.Calls[1].Method)
+}
+
+func TestMockClientDeleteShed(t *testing.T) {
+	m := NewMockClient()
+
+	err := m.DeleteShed("test-shed", true)
+
+	assert.NoError(t, err)
+	assert.Len(t, m.Calls, 1)
+	assert.Equal(t, "DeleteShed", m.Calls[0].Method)
+	assert.Equal(t, "test-shed", m.Calls[0].Args[0])
+	assert.Equal(t, true, m.Calls[0].Args[1])
+}
+
+func TestMockClientExecCommand(t *testing.T) {
+	m := NewMockClient()
+
+	cmd := m.ExecCommand("test-shed", "claude", "--help")
+
+	assert.NotNil(t, cmd)
+	assert.Len(t, m.Calls, 1)
+	assert.Equal(t, "ExecCommand", m.Calls[0].Method)
+}
+
+func TestMockClientConsole(t *testing.T) {
+	m := NewMockClient()
+
+	cmd := m.Console("test-shed")
+
+	assert.NotNil(t, cmd)
+	assert.Len(t, m.Calls, 1)
+	assert.Equal(t, "Console", m.Calls[0].Method)
+}
+
+func TestShedStruct(t *testing.T) {
+	now := time.Now()
+	s := Shed{
+		Name:      "test-shed",
+		Server:    "mini-desktop",
+		Status:    "running",
+		CreatedAt: now,
+		Repo:      "user/repo",
+	}
+
+	assert.Equal(t, "test-shed", s.Name)
+	assert.Equal(t, "mini-desktop", s.Server)
+	assert.Equal(t, "running", s.Status)
+	assert.Equal(t, now, s.CreatedAt)
+	assert.Equal(t, "user/repo", s.Repo)
+}

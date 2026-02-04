@@ -1,0 +1,45 @@
+# Codely Configuration - Test Fixture
+
+workspace_roots:
+  - ~/work
+  - ~/projects
+  - ~/src
+
+commands:
+  claude:
+    display_name: "Claude Code"
+    exec: claude
+    args:
+      - "--dangerously-skip-permissions"
+
+  opencode:
+    display_name: "OpenCode"
+    exec: opencode
+    args: []
+
+  codex:
+    display_name: "Codex"
+    exec: codex
+    args: []
+
+  lazygit:
+    display_name: "Lazygit"
+    exec: lazygit
+    args: []
+
+  bash:
+    display_name: "Bash Shell"
+    exec: bash
+    args: []
+
+default_command: claude
+
+ui:
+  manager_width: 30
+  status_poll_interval: 1s
+  show_directory: true
+  auto_expand_projects: true
+
+shed:
+  enabled: true
+  default_server: ""

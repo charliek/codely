@@ -454,6 +454,10 @@ commands:
     exec: bash
     args: []
 
+# Notes:
+# - "exec" should be a single binary name/path without spaces.
+# - Use "args" to pass flags and additional arguments.
+
 # Default command when adding first terminal to a project
 default_command: claude
 

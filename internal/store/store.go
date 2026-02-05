@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/charliek/codely/internal/domain"
+	"github.com/charliek/codely/internal/pathutil"
 	"github.com/charliek/codely/internal/tmux"
 )
 
@@ -20,15 +21,15 @@ type State struct {
 
 // Store handles persistence of projects and sessions
 type Store struct {
-	path     string
-	state    State
-	mu       sync.RWMutex
+	path  string
+	state State
+	mu    sync.RWMutex
 }
 
 // New creates a new store with the given path
 func New(path string) *Store {
 	return &Store{
-		path: expandPath(path),
+		path: pathutil.ExpandPath(path),
 		state: State{
 			Projects:    []*domain.Project{},
 			TmuxSession: "codely",
@@ -41,9 +42,9 @@ func (s *Store) Load() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Ensure directory exists
+	// Ensure directory exists with restricted permissions (owner only)
 	dir := filepath.Dir(s.path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("creating state directory: %w", err)
 	}
 
@@ -73,12 +74,12 @@ func (s *Store) Load() error {
 
 // Save writes the state to disk
 func (s *Store) Save() error {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	// Ensure directory exists
+	// Ensure directory exists with restricted permissions (owner only)
 	dir := filepath.Dir(s.path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("creating state directory: %w", err)
 	}
 
@@ -87,7 +88,8 @@ func (s *Store) Save() error {
 		return fmt.Errorf("marshaling state: %w", err)
 	}
 
-	if err := os.WriteFile(s.path, data, 0644); err != nil {
+	// Write with restricted permissions (owner read/write only)
+	if err := os.WriteFile(s.path, data, 0600); err != nil {
 		return fmt.Errorf("writing state file: %w", err)
 	}
 
@@ -270,16 +272,4 @@ func (s *Store) SetTmuxSession(name string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.state.TmuxSession = name
-}
-
-// expandPath expands ~ to the user's home directory
-func expandPath(path string) string {
-	if len(path) > 0 && path[0] == '~' {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return path
-		}
-		return home + path[1:]
-	}
-	return path
 }

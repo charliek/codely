@@ -9,6 +9,32 @@ import (
 	"github.com/charliek/codely/internal/domain"
 )
 
+// Detection tuning constants
+const (
+	// recentLinesCount is the number of recent terminal lines to analyze for status detection.
+	// This provides enough context to detect prompts, spinners, and status messages
+	// while avoiding noise from older output.
+	recentLinesCount = 15
+
+	// claudeSpinnerLinesCount is the number of recent lines to check for spinner characters
+	// in Claude-specific detection. A smaller window reduces false positives from
+	// spinners that appeared earlier in output.
+	claudeSpinnerLinesCount = 10
+
+	// shellRecentLinesCount is the number of lines to check for shell prompt detection.
+	// Shell prompts typically appear at the very end, so fewer lines suffice.
+	shellRecentLinesCount = 10
+
+	// promptCheckLinesCount is the number of trailing lines to check for command prompts.
+	// Prompts appear at the end of output, so checking more lines would increase false positives.
+	promptCheckLinesCount = 3
+
+	// lazygitBoxDrawingThreshold is the minimum number of lines containing box-drawing
+	// characters required to identify a lazygit TUI. This distinguishes lazygit from
+	// occasional box characters in other output.
+	lazygitBoxDrawingThreshold = 3
+)
+
 // Spinner characters used by various CLI tools
 var spinnerChars = []rune{'⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'}
 
@@ -84,7 +110,7 @@ func Detect(content string) domain.Status {
 	}
 
 	lines := strings.Split(content, "\n")
-	recent := getLastNonEmptyLines(lines, 15)
+	recent := getLastNonEmptyLines(lines, recentLinesCount)
 
 	// Check for spinner characters (thinking)
 	if containsSpinner(recent) {
@@ -146,7 +172,7 @@ func normalizeTool(value string) string {
 
 func detectClaude(content string) domain.Status {
 	lines := strings.Split(content, "\n")
-	recent := getLastNonEmptyLines(lines, 15)
+	recent := getLastNonEmptyLines(lines, recentLinesCount)
 	recentContent := strings.Join(recent, "\n")
 	recentLower := strings.ToLower(recentContent)
 
@@ -164,7 +190,7 @@ func detectClaude(content string) domain.Status {
 
 func detectOpenCode(content string) domain.Status {
 	lines := strings.Split(content, "\n")
-	recent := getLastNonEmptyLines(lines, 15)
+	recent := getLastNonEmptyLines(lines, recentLinesCount)
 	recentContent := strings.Join(recent, "\n")
 
 	if openCodeBusy(recentContent) {
@@ -181,7 +207,7 @@ func detectOpenCode(content string) domain.Status {
 
 func detectCodex(content string) domain.Status {
 	lines := strings.Split(content, "\n")
-	recent := getLastNonEmptyLines(lines, 15)
+	recent := getLastNonEmptyLines(lines, recentLinesCount)
 	recentContent := strings.Join(recent, "\n")
 
 	if codexPrompt(recentContent) {
@@ -195,7 +221,7 @@ func detectCodex(content string) domain.Status {
 
 func detectShell(content string) domain.Status {
 	lines := strings.Split(content, "\n")
-	recent := getLastNonEmptyLines(lines, 10)
+	recent := getLastNonEmptyLines(lines, shellRecentLinesCount)
 
 	if endsWithPrompt(recent) {
 		return domain.StatusIdle
@@ -223,8 +249,8 @@ func claudeBusy(lines []string, recentLower string) bool {
 		"✳", "✽", "✶", "✢",
 	}
 	checkLines := lines
-	if len(checkLines) > 10 {
-		checkLines = checkLines[len(checkLines)-10:]
+	if len(checkLines) > claudeSpinnerLinesCount {
+		checkLines = checkLines[len(checkLines)-claudeSpinnerLinesCount:]
 	}
 	for _, line := range checkLines {
 		trimmed := strings.TrimSpace(line)
@@ -471,8 +497,8 @@ func endsWithPrompt(lines []string) bool {
 
 	// Check last few lines for prompts
 	checkLines := lines
-	if len(checkLines) > 3 {
-		checkLines = checkLines[len(checkLines)-3:]
+	if len(checkLines) > promptCheckLinesCount {
+		checkLines = checkLines[len(checkLines)-promptCheckLinesCount:]
 	}
 
 	for _, line := range checkLines {
@@ -521,7 +547,7 @@ func isLazygitUI(lines []string) bool {
 	}
 
 	// If we have many box drawing characters and lazygit keywords, it's likely lazygit
-	return boxDrawingCount >= 3 && hasLazygitKeyword
+	return boxDrawingCount >= lazygitBoxDrawingThreshold && hasLazygitKeyword
 }
 
 // StripANSI removes ANSI escape codes from content.

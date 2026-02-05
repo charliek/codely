@@ -85,10 +85,11 @@ func (c *DefaultClient) AttachSession(name string) error {
 // It runs the specified command with args in the given directory
 // Returns the pane ID of the newly created pane
 func (c *DefaultClient) SplitWindow(dir, command string, args ...string) (int, error) {
-	// Build the full command string
-	cmdParts := []string{command}
-	cmdParts = append(cmdParts, args...)
-	fullCmd := strings.Join(cmdParts, " ")
+	if strings.ContainsAny(command, " \t") {
+		fmt.Fprintf(os.Stderr, "codely: command exec contains whitespace; use exec + args instead: %q\n", command)
+	}
+	// Build the full command string with proper shell quoting
+	fullCmd := shellQuoteCommand(command, args...)
 
 	// Build tmux split-window command
 	tmuxArgs := []string{
@@ -128,10 +129,11 @@ func (c *DefaultClient) SplitWindow(dir, command string, args ...string) (int, e
 // If vertical is true, splits vertically (new pane below); otherwise horizontally (new pane to right)
 // Returns the pane ID of the newly created pane
 func (c *DefaultClient) SplitPane(targetPaneID int, vertical bool, dir, command string, args ...string) (int, error) {
-	// Build the full command string
-	cmdParts := []string{command}
-	cmdParts = append(cmdParts, args...)
-	fullCmd := strings.Join(cmdParts, " ")
+	if strings.ContainsAny(command, " \t") {
+		fmt.Fprintf(os.Stderr, "codely: command exec contains whitespace; use exec + args instead: %q\n", command)
+	}
+	// Build the full command string with proper shell quoting
+	fullCmd := shellQuoteCommand(command, args...)
 
 	// Build tmux split-window command
 	splitFlag := "-h" // horizontal split (new pane to the right)
@@ -298,8 +300,12 @@ func (c *DefaultClient) BindJumpKey(key string, paneID int) error {
 
 // UnbindJumpKey removes the custom key binding and restores default window selection.
 func (c *DefaultClient) UnbindJumpKey(key string) error {
-	_ = exec.Command("tmux", "unbind-key", key).Run()
-	_ = exec.Command("tmux", "bind-key", key, "select-window", "-t", ":"+key).Run()
+	if err := exec.Command("tmux", "unbind-key", key).Run(); err != nil {
+		return fmt.Errorf("unbind-key failed: %w", err)
+	}
+	if err := exec.Command("tmux", "bind-key", key, "select-window", "-t", ":"+key).Run(); err != nil {
+		return fmt.Errorf("bind-key failed: %w", err)
+	}
 	return nil
 }
 
@@ -392,4 +398,54 @@ func (c *DefaultClient) JoinPane(paneID int, targetPaneID int) (int, error) {
 	}
 
 	return newPaneID, nil
+}
+
+// shellQuoteCommand quotes a command and its arguments for safe shell execution.
+// This prevents command injection by properly escaping special characters.
+func shellQuoteCommand(command string, args ...string) string {
+	parts := make([]string, 0, len(args)+1)
+	parts = append(parts, shellQuote(command))
+	for _, arg := range args {
+		parts = append(parts, shellQuote(arg))
+	}
+	return strings.Join(parts, " ")
+}
+
+// shellQuote returns a shell-escaped version of the string.
+// If the string contains no special characters, it's returned as-is.
+// Otherwise, it's wrapped in single quotes with internal single quotes escaped.
+func shellQuote(s string) string {
+	// If empty, return quoted empty string
+	if s == "" {
+		return "''"
+	}
+
+	// Check if quoting is needed - only safe characters don't need quoting
+	needsQuote := false
+	for _, r := range s {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9') || r == '-' || r == '_' ||
+			r == '.' || r == '/' || r == ':' || r == '@' || r == '=') {
+			needsQuote = true
+			break
+		}
+	}
+
+	if !needsQuote {
+		return s
+	}
+
+	// Use single quotes, escaping any internal single quotes
+	// Single quote is escaped by ending the quote, adding escaped quote, starting new quote: '\''
+	var b strings.Builder
+	b.WriteByte('\'')
+	for _, r := range s {
+		if r == '\'' {
+			b.WriteString("'\\''")
+		} else {
+			b.WriteRune(r)
+		}
+	}
+	b.WriteByte('\'')
+	return b.String()
 }

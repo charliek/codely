@@ -7,6 +7,7 @@ import (
 
 	"github.com/charliek/codely/internal/constants"
 	"github.com/charliek/codely/internal/domain"
+	"github.com/charliek/codely/internal/pathutil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -47,7 +48,7 @@ type ShedConfig struct {
 // Load reads and parses a configuration file
 func Load(path string) (*Config, error) {
 	// Expand ~ in path
-	path = expandPath(path)
+	path = pathutil.ExpandPath(path)
 
 	// Check if file exists
 	if _, err := os.Stat(path); err != nil {
@@ -176,16 +177,4 @@ func (c Command) ToDomainCommand(id string) domain.Command {
 		Args:        c.Args,
 		Env:         c.Env,
 	}
-}
-
-// expandPath expands ~ to the user's home directory
-func expandPath(path string) string {
-	if len(path) > 0 && path[0] == '~' {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return path
-		}
-		return home + path[1:]
-	}
-	return path
 }

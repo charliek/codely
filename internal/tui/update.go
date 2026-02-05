@@ -368,19 +368,56 @@ func (m Model) handleCloseAll() (tea.Model, tea.Cmd) {
 
 // handleFolderPickerKey handles keys in folder picker mode
 func (m Model) handleFolderPickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	selectCurrent := func() (tea.Model, tea.Cmd) {
+		folders := m.filteredFolders()
+		if m.folderIdx < len(folders) {
+			return m, m.createProjectCmd(folders[m.folderIdx])
+		}
+		return m, nil
+	}
+
+	clampSelection := func() {
+		folders := m.filteredFolders()
+		if len(folders) == 0 {
+			m.folderIdx = 0
+			return
+		}
+		if m.folderIdx >= len(folders) {
+			m.folderIdx = len(folders) - 1
+		}
+		if m.folderIdx < 0 {
+			m.folderIdx = 0
+		}
+	}
+
 	if m.folderSearching {
 		switch msg.Type {
 		case tea.KeyEsc:
+			if m.folderSearch.Value() != "" {
+				m.folderSearch.SetValue("")
+				clampSelection()
+				return m, nil
+			}
 			m.folderSearching = false
 			m.folderSearch.Blur()
+			m.mode = ModeNormal
 			return m, nil
 		case tea.KeyEnter:
-			m.folderSearching = false
-			m.folderSearch.Blur()
+			return selectCurrent()
+		case tea.KeyUp:
+			if m.folderIdx > 0 {
+				m.folderIdx--
+			}
+			return m, nil
+		case tea.KeyDown:
+			if m.folderIdx < len(m.filteredFolders())-1 {
+				m.folderIdx++
+			}
 			return m, nil
 		default:
 			var cmd tea.Cmd
 			m.folderSearch, cmd = m.folderSearch.Update(msg)
+			clampSelection()
 			return m, cmd
 		}
 	}
@@ -403,11 +440,7 @@ func (m Model) handleFolderPickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keys.Enter):
-		folders := m.filteredFolders()
-		if m.folderIdx < len(folders) {
-			return m, m.createProjectCmd(folders[m.folderIdx])
-		}
-		return m, nil
+		return selectCurrent()
 
 	case key.Matches(msg, m.keys.Search):
 		m.folderSearching = true

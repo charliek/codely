@@ -292,7 +292,7 @@ func (m Model) folderPickerView() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(styleHelp.Render("[/] search  [enter] select  [esc] back"))
+	b.WriteString(styleHelp.Render("[/] search  [enter] select  [esc] clear/back"))
 
 	return styleDialog.Render(b.String())
 }

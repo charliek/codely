@@ -53,6 +53,7 @@ type Session struct {
 	Status    Status    `json:"-"` // Current status
 	StartedAt time.Time `json:"-"`
 	IsVisible bool      `json:"-"` // Currently visible in main window?
+	ExitCode  *int      `json:"-"` // Exit code if process exited
 }
 
 // Command defines what runs in a session

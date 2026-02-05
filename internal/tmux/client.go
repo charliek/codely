@@ -15,6 +15,8 @@ type PaneInfo struct {
 	Command  string
 	Active   bool
 	WindowID string
+	Dead     bool
+	DeadCode *int
 }
 
 // Client defines the interface for tmux operations
@@ -31,6 +33,7 @@ type Client interface {
 	KillPane(paneID int) error
 	ResizePane(paneID int, width int) error
 	ToggleZoom(paneID int) error
+	SetRemainOnExit(paneID int, enabled bool) error
 
 	// Pane visibility management (for single visible pane mode)
 	BreakPane(paneID int) (newPaneID int, err error)                  // Move pane to background window
@@ -188,6 +191,16 @@ func (c *DefaultClient) ToggleZoom(paneID int) error {
 	return cmd.Run()
 }
 
+// SetRemainOnExit sets remain-on-exit for a specific pane.
+func (c *DefaultClient) SetRemainOnExit(paneID int, enabled bool) error {
+	value := "off"
+	if enabled {
+		value = "on"
+	}
+	cmd := exec.Command("tmux", "set-option", "-p", "-t", fmt.Sprintf("%%%d", paneID), "remain-on-exit", value)
+	return cmd.Run()
+}
+
 // CapturePane captures the last N lines of content from the specified pane
 func (c *DefaultClient) CapturePane(paneID int, lines int) (string, error) {
 	cmd := exec.Command("tmux", "capture-pane",
@@ -206,7 +219,7 @@ func (c *DefaultClient) CapturePane(paneID int, lines int) (string, error) {
 func (c *DefaultClient) ListPanes() ([]PaneInfo, error) {
 	cmd := exec.Command("tmux", "list-panes",
 		"-a", // all panes across all sessions
-		"-F", "#{pane_id}:#{pane_current_command}:#{pane_active}:#{window_id}",
+		"-F", "#{pane_id}:#{pane_current_command}:#{pane_active}:#{window_id}:#{pane_dead}:#{pane_dead_status}",
 	)
 	output, err := cmd.Output()
 	if err != nil {
@@ -219,8 +232,8 @@ func (c *DefaultClient) ListPanes() ([]PaneInfo, error) {
 			continue
 		}
 
-		parts := strings.SplitN(line, ":", 4)
-		if len(parts) < 4 {
+		parts := strings.SplitN(line, ":", 6)
+		if len(parts) < 6 {
 			continue
 		}
 
@@ -234,11 +247,21 @@ func (c *DefaultClient) ListPanes() ([]PaneInfo, error) {
 			continue
 		}
 
+		dead := parts[4] == "1"
+		var deadCode *int
+		if dead && parts[5] != "" && parts[5] != "-1" {
+			if code, err := strconv.Atoi(parts[5]); err == nil {
+				deadCode = &code
+			}
+		}
+
 		panes = append(panes, PaneInfo{
 			ID:       id,
 			Command:  parts[1],
 			Active:   parts[2] == "1",
 			WindowID: parts[3],
+			Dead:     dead,
+			DeadCode: deadCode,
 		})
 	}
 

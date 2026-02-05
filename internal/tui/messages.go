@@ -10,7 +10,8 @@ type TickMsg struct{}
 
 // StatusUpdateMsg contains updated status for sessions
 type StatusUpdateMsg struct {
-	Updates map[string]domain.Status // session ID -> status
+	Updates   map[string]domain.Status // session ID -> status
+	ExitCodes map[string]*int          // session ID -> exit code (if any)
 }
 
 // PaneCreatedMsg is sent when a new tmux pane is created

@@ -43,6 +43,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case StatusUpdateMsg:
 		m.applyStatusUpdates(msg.Updates)
+		m.applyExitCodeUpdates(msg.ExitCodes)
 
 	case FoldersLoadedMsg:
 		if msg.Err != nil {
@@ -265,6 +266,13 @@ func (m Model) handleEnter() (tea.Model, tea.Cmd) {
 	}
 
 	if item.Type == components.ItemTypeSession {
+		if item.Session.Status == domain.StatusExited {
+			_ = m.store.RemoveSession(item.Project.ID, item.Session.ID)
+			_ = m.store.Save()
+			m.tree.SetProjects(m.store.Projects())
+			return m, nil
+		}
+
 		// Check if session has a pane
 		if item.Session.PaneID == 0 {
 			return m, nil
@@ -783,6 +791,22 @@ func (m *Model) applyStatusUpdates(updates map[string]domain.Status) {
 		for i := range proj.Sessions {
 			if status, ok := updates[proj.Sessions[i].ID]; ok {
 				proj.Sessions[i].Status = status
+				if status != domain.StatusError {
+					proj.Sessions[i].ExitCode = nil
+				}
+			}
+		}
+	}
+}
+
+func (m *Model) applyExitCodeUpdates(codes map[string]*int) {
+	if len(codes) == 0 {
+		return
+	}
+	for _, proj := range m.store.Projects() {
+		for i := range proj.Sessions {
+			if code, ok := codes[proj.Sessions[i].ID]; ok {
+				proj.Sessions[i].ExitCode = code
 			}
 		}
 	}

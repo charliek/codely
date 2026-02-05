@@ -50,8 +50,8 @@ func TestMockClientCapturePane(t *testing.T) {
 func TestMockClientListPanes(t *testing.T) {
 	m := NewMockClient()
 	m.ListPanesResult = []PaneInfo{
-		{ID: 1, Command: "bash", Active: true},
-		{ID: 2, Command: "vim", Active: false},
+		{ID: 1, Command: "bash", Active: true, WindowID: "@0", Dead: false},
+		{ID: 2, Command: "vim", Active: false, WindowID: "@0", Dead: true},
 	}
 
 	panes, err := m.ListPanes()

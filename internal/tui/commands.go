@@ -12,6 +12,7 @@ import (
 	"github.com/charliek/codely/internal/domain"
 	"github.com/charliek/codely/internal/shed"
 	"github.com/charliek/codely/internal/status"
+	"github.com/charliek/codely/internal/tmux"
 )
 
 // statusPollCmd returns a command that polls status after the configured interval
@@ -25,12 +26,13 @@ func (m *Model) statusPollCmd() tea.Cmd {
 func (m *Model) pollStatusCmd() tea.Cmd {
 	return func() tea.Msg {
 		updates := make(map[string]domain.Status)
+		exitCodes := make(map[string]*int)
 
 		panes, listErr := m.tmux.ListPanes()
-		paneMap := make(map[int]bool)
+		paneMap := make(map[int]tmux.PaneInfo)
 		if listErr == nil {
 			for _, p := range panes {
-				paneMap[p.ID] = true
+				paneMap[p.ID] = p
 			}
 		}
 
@@ -40,18 +42,31 @@ func (m *Model) pollStatusCmd() tea.Cmd {
 					continue
 				}
 
-				if listErr == nil && !paneMap[sess.PaneID] {
-					updates[sess.ID] = domain.StatusExited
-					continue
+				if listErr == nil {
+					pane, ok := paneMap[sess.PaneID]
+					if !ok {
+						updates[sess.ID] = domain.StatusExited
+						exitCodes[sess.ID] = nil
+						continue
+					}
+
+					if pane.Dead {
+						if pane.DeadCode != nil && *pane.DeadCode != 0 {
+							updates[sess.ID] = domain.StatusError
+							exitCodes[sess.ID] = pane.DeadCode
+							continue
+						}
+
+						updates[sess.ID] = domain.StatusExited
+						exitCodes[sess.ID] = pane.DeadCode
+						_ = m.tmux.KillPane(sess.PaneID)
+						continue
+					}
 				}
 
 				content, capErr := m.tmux.CapturePane(sess.PaneID, 15)
 				if capErr != nil {
-					if listErr == nil && !paneMap[sess.PaneID] {
-						updates[sess.ID] = domain.StatusExited
-					} else {
-						updates[sess.ID] = domain.StatusError
-					}
+					updates[sess.ID] = domain.StatusError
 					continue
 				}
 
@@ -59,7 +74,7 @@ func (m *Model) pollStatusCmd() tea.Cmd {
 			}
 		}
 
-		return StatusUpdateMsg{Updates: updates}
+		return StatusUpdateMsg{Updates: updates, ExitCodes: exitCodes}
 	}
 }
 
@@ -219,6 +234,9 @@ func (m *Model) createPaneCmd(project *domain.Project, session *domain.Session) 
 			paneID, err = m.tmux.SplitPane(m.codelyPaneID, false, dir, execCmd, execArgs...)
 		} else {
 			paneID, err = m.tmux.SplitWindow(dir, execCmd, execArgs...)
+		}
+		if paneID > 0 {
+			_ = m.tmux.SetRemainOnExit(paneID, true)
 		}
 
 		return PaneCreatedMsg{

@@ -2,26 +2,27 @@ package tmux
 
 // MockClient is a mock implementation of Client for testing
 type MockClient struct {
-	InTmuxResult      bool
-	CreateSessionErr  error
-	AttachSessionErr  error
-	SplitWindowPaneID int
-	SplitWindowErr    error
-	SplitPanePaneID   int
-	SplitPaneErr      error
-	FocusPaneErr      error
-	KillPaneErr       error
-	ResizePaneErr     error
-	ToggleZoomErr     error
-	BreakPanePaneID   int
-	BreakPaneErr      error
-	JoinPanePaneID    int
-	JoinPaneErr       error
-	CapturePaneResult string
-	CapturePaneErr    error
-	ListPanesResult   []PaneInfo
-	ListPanesErr      error
-	PaneExistsResult  bool
+	InTmuxResult       bool
+	CreateSessionErr   error
+	AttachSessionErr   error
+	SplitWindowPaneID  int
+	SplitWindowErr     error
+	SplitPanePaneID    int
+	SplitPaneErr       error
+	FocusPaneErr       error
+	KillPaneErr        error
+	ResizePaneErr      error
+	ToggleZoomErr      error
+	SetRemainOnExitErr error
+	BreakPanePaneID    int
+	BreakPaneErr       error
+	JoinPanePaneID     int
+	JoinPaneErr        error
+	CapturePaneResult  string
+	CapturePaneErr     error
+	ListPanesResult    []PaneInfo
+	ListPanesErr       error
+	PaneExistsResult   bool
 
 	// Track calls for verification
 	Calls []MockCall
@@ -93,6 +94,11 @@ func (m *MockClient) ResizePane(paneID int, width int) error {
 func (m *MockClient) ToggleZoom(paneID int) error {
 	m.recordCall("ToggleZoom", paneID)
 	return m.ToggleZoomErr
+}
+
+func (m *MockClient) SetRemainOnExit(paneID int, enabled bool) error {
+	m.recordCall("SetRemainOnExit", paneID, enabled)
+	return m.SetRemainOnExitErr
 }
 
 func (m *MockClient) CapturePane(paneID int, lines int) (string, error) {

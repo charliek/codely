@@ -4,8 +4,11 @@ package domain
 type Status string
 
 const (
-	// StatusIdle indicates the session is waiting for user input (prompt visible)
+	// StatusIdle indicates the session is idle (prompt visible for shells/UI)
 	StatusIdle Status = "idle"
+
+	// StatusWaiting indicates the session is waiting for user input (tool prompt visible)
+	StatusWaiting Status = "waiting"
 
 	// StatusThinking indicates the AI is processing (spinner visible)
 	StatusThinking Status = "thinking"
@@ -36,6 +39,8 @@ func (s Status) Icon() string {
 	switch s {
 	case StatusIdle:
 		return "💤"
+	case StatusWaiting:
+		return "⏳"
 	case StatusThinking:
 		return "🤔"
 	case StatusExecuting:

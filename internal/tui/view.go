@@ -227,6 +227,8 @@ func (m Model) styleStatus(status domain.Status) lipgloss.Style {
 	switch status {
 	case domain.StatusIdle:
 		return styleStatusIdle
+	case domain.StatusWaiting:
+		return styleStatusWaiting
 	case domain.StatusThinking:
 		return styleStatusThinking
 	case domain.StatusExecuting:

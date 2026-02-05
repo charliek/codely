@@ -178,6 +178,7 @@ func (m Model) handleNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keys.Quit):
 		// Save state before quitting
 		_ = m.store.Save()
+		m.clearTmuxNotifications()
 		return m, tea.Quit
 
 	case key.Matches(msg, m.keys.Help):
@@ -797,6 +798,8 @@ func (m *Model) applyStatusUpdates(updates map[string]domain.Status) {
 			}
 		}
 	}
+
+	m.updateTmuxNotifications()
 }
 
 func (m *Model) applyExitCodeUpdates(codes map[string]*int) {

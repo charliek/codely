@@ -113,6 +113,73 @@ func TestDetect(t *testing.T) {
 	}
 }
 
+func TestDetectWithMode(t *testing.T) {
+	tests := []struct {
+		name        string
+		content     string
+		commandID   string
+		commandExec string
+		mode        string
+		expected    domain.Status
+	}{
+		{
+			name:        "claude waiting prompt",
+			content:     "Done.\n>",
+			commandID:   "claude",
+			commandExec: "claude",
+			mode:        "auto",
+			expected:    domain.StatusWaiting,
+		},
+		{
+			name:        "claude thinking busy indicator",
+			content:     "ctrl+c to interrupt\n✳ Gusting… (35s · ↑ 673 tokens)",
+			commandID:   "claude",
+			commandExec: "claude",
+			mode:        "auto",
+			expected:    domain.StatusThinking,
+		},
+		{
+			name:        "opencode waiting prompt",
+			content:     "Ask anything\npress enter to send",
+			commandID:   "opencode",
+			commandExec: "opencode",
+			mode:        "auto",
+			expected:    domain.StatusWaiting,
+		},
+		{
+			name:        "opencode busy",
+			content:     "Thinking...\n█",
+			commandID:   "opencode",
+			commandExec: "opencode",
+			mode:        "auto",
+			expected:    domain.StatusThinking,
+		},
+		{
+			name:        "codex waiting prompt",
+			content:     "codex>",
+			commandID:   "codex",
+			commandExec: "codex",
+			mode:        "auto",
+			expected:    domain.StatusWaiting,
+		},
+		{
+			name:        "generic override uses generic detector",
+			content:     "Done.\n>",
+			commandID:   "claude",
+			commandExec: "claude",
+			mode:        "generic",
+			expected:    domain.StatusIdle,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := DetectWithMode(tt.content, tt.commandID, tt.commandExec, tt.mode)
+			assert.Equal(t, tt.expected, got, "content: %q", tt.content)
+		})
+	}
+}
+
 func TestContainsSpinner(t *testing.T) {
 	tests := []struct {
 		lines    []string

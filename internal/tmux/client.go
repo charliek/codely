@@ -45,6 +45,12 @@ type Client interface {
 	// Information
 	ListPanes() ([]PaneInfo, error)
 	PaneExists(paneID int) bool
+
+	// Status bar + key binding
+	GetStatusRight() (string, error)
+	SetStatusRight(value string) error
+	BindJumpKey(key string, paneID int) error
+	UnbindJumpKey(key string) error
 }
 
 // DefaultClient implements the Client interface using tmux commands
@@ -266,6 +272,35 @@ func (c *DefaultClient) ListPanes() ([]PaneInfo, error) {
 	}
 
 	return panes, nil
+}
+
+// GetStatusRight returns the current status-right value.
+func (c *DefaultClient) GetStatusRight() (string, error) {
+	cmd := exec.Command("tmux", "show-option", "-gqv", "status-right")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("show-option status-right failed: %w", err)
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+// SetStatusRight sets the status-right value.
+func (c *DefaultClient) SetStatusRight(value string) error {
+	cmd := exec.Command("tmux", "set-option", "-g", "status-right", value)
+	return cmd.Run()
+}
+
+// BindJumpKey binds a number key to jump to a pane.
+func (c *DefaultClient) BindJumpKey(key string, paneID int) error {
+	cmd := exec.Command("tmux", "bind-key", key, "select-pane", "-t", fmt.Sprintf("%%%d", paneID))
+	return cmd.Run()
+}
+
+// UnbindJumpKey removes the custom key binding and restores default window selection.
+func (c *DefaultClient) UnbindJumpKey(key string) error {
+	_ = exec.Command("tmux", "unbind-key", key).Run()
+	_ = exec.Command("tmux", "bind-key", key, "select-window", "-t", ":"+key).Run()
+	return nil
 }
 
 // PaneExists checks if a pane with the given ID exists

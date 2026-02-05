@@ -42,6 +42,7 @@ Tip: Use tmux zoom (`prefix` + `z`) to toggle fullscreen for the active pane.
 Configuration file location: `~/.config/codely/config.yaml`
 
 See `docs/spec.md` for the full configuration schema.
+See `docs/status-detection.md` for status values, auto-detection, and overrides.
 
 ## Development
 

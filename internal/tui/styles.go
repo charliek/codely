@@ -67,8 +67,11 @@ var (
 	styleStatusIdle = lipgloss.NewStyle().
 			Foreground(colorMuted)
 
-	styleStatusThinking = lipgloss.NewStyle().
+	styleStatusWaiting = lipgloss.NewStyle().
 				Foreground(colorWarning)
+
+	styleStatusThinking = lipgloss.NewStyle().
+				Foreground(colorPrimary)
 
 	styleStatusExecuting = lipgloss.NewStyle().
 				Foreground(colorSuccess)

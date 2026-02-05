@@ -70,7 +70,11 @@ func (m *Model) pollStatusCmd() tea.Cmd {
 					continue
 				}
 
-				updates[sess.ID] = status.Detect(content)
+				detectionMode := ""
+				if cmdCfg, ok := m.config.Commands[sess.Command.ID]; ok {
+					detectionMode = cmdCfg.StatusDetection
+				}
+				updates[sess.ID] = status.DetectWithMode(content, sess.Command.ID, sess.Command.Exec, detectionMode)
 			}
 		}
 

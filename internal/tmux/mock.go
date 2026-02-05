@@ -23,6 +23,11 @@ type MockClient struct {
 	ListPanesResult    []PaneInfo
 	ListPanesErr       error
 	PaneExistsResult   bool
+	StatusRightResult  string
+	StatusRightErr     error
+	SetStatusRightErr  error
+	BindJumpKeyErr     error
+	UnbindJumpKeyErr   error
 
 	// Track calls for verification
 	Calls []MockCall
@@ -114,6 +119,26 @@ func (m *MockClient) ListPanes() ([]PaneInfo, error) {
 func (m *MockClient) PaneExists(paneID int) bool {
 	m.recordCall("PaneExists", paneID)
 	return m.PaneExistsResult
+}
+
+func (m *MockClient) GetStatusRight() (string, error) {
+	m.recordCall("GetStatusRight")
+	return m.StatusRightResult, m.StatusRightErr
+}
+
+func (m *MockClient) SetStatusRight(value string) error {
+	m.recordCall("SetStatusRight", value)
+	return m.SetStatusRightErr
+}
+
+func (m *MockClient) BindJumpKey(key string, paneID int) error {
+	m.recordCall("BindJumpKey", key, paneID)
+	return m.BindJumpKeyErr
+}
+
+func (m *MockClient) UnbindJumpKey(key string) error {
+	m.recordCall("UnbindJumpKey", key)
+	return m.UnbindJumpKeyErr
 }
 
 func (m *MockClient) BreakPane(paneID int) (int, error) {

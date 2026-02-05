@@ -25,6 +25,9 @@ type Command struct {
 	Exec        string            `yaml:"exec"`
 	Args        []string          `yaml:"args"`
 	Env         map[string]string `yaml:"env,omitempty"`
+	// StatusDetection controls tool-specific status heuristics.
+	// Supported: auto, generic, claude, opencode, codex, shell
+	StatusDetection string `yaml:"status_detection,omitempty"`
 }
 
 // UIConfig represents UI preferences

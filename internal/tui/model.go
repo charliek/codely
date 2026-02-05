@@ -91,6 +91,10 @@ type Model struct {
 	// Pane tracking for layout management
 	codelyPaneID   int    // The pane running Codely (used for splitting)
 	codelyWindowID string // The tmux window containing Codely
+
+	// tmux status bar notifications
+	statusBarLast string
+	statusBarKeys map[string]int
 }
 
 // NewModel creates a new application model
@@ -145,6 +149,7 @@ func NewModel(cfg *config.Config, store *store.Store, tmuxClient tmux.Client, sh
 		shedCreateRepo: shedCreateRepo,
 		codelyPaneID:   codelyPaneID,
 		codelyWindowID: codelyWindowID,
+		statusBarKeys:  make(map[string]int),
 	}
 }
 

@@ -315,6 +315,13 @@ func (m Model) handleClose() (tea.Model, tea.Cmd) {
 	}
 
 	if item.Type == components.ItemTypeSession {
+		if item.Session.PaneID == 0 || !m.tmux.PaneExists(item.Session.PaneID) {
+			_ = m.store.RemoveSession(item.Project.ID, item.Session.ID)
+			_ = m.store.Save()
+			m.tree.SetProjects(m.store.Projects())
+			return m, nil
+		}
+
 		// Confirm closing session
 		m.confirmAction = ConfirmCloseSession
 		m.confirmProject = item.Project

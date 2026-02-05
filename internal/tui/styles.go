@@ -76,6 +76,9 @@ var (
 	styleStatusError = lipgloss.NewStyle().
 				Foreground(colorError)
 
+	styleStatusExited = lipgloss.NewStyle().
+				Foreground(colorMuted)
+
 	styleStatusStopped = lipgloss.NewStyle().
 				Foreground(colorMuted)
 )

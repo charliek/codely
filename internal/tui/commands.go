@@ -26,15 +26,32 @@ func (m *Model) pollStatusCmd() tea.Cmd {
 	return func() tea.Msg {
 		updates := make(map[string]domain.Status)
 
+		panes, listErr := m.tmux.ListPanes()
+		paneMap := make(map[int]bool)
+		if listErr == nil {
+			for _, p := range panes {
+				paneMap[p.ID] = true
+			}
+		}
+
 		for _, proj := range m.store.Projects() {
 			for _, sess := range proj.Sessions {
 				if sess.PaneID == 0 {
 					continue
 				}
 
-				content, err := m.tmux.CapturePane(sess.PaneID, 15)
-				if err != nil {
-					updates[sess.ID] = domain.StatusError
+				if listErr == nil && !paneMap[sess.PaneID] {
+					updates[sess.ID] = domain.StatusExited
+					continue
+				}
+
+				content, capErr := m.tmux.CapturePane(sess.PaneID, 15)
+				if capErr != nil {
+					if listErr == nil && !paneMap[sess.PaneID] {
+						updates[sess.ID] = domain.StatusExited
+					} else {
+						updates[sess.ID] = domain.StatusError
+					}
 					continue
 				}
 

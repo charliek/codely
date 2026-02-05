@@ -16,6 +16,9 @@ const (
 	// StatusError indicates the process crashed or exited with error
 	StatusError Status = "error"
 
+	// StatusExited indicates the process exited cleanly and pane no longer exists
+	StatusExited Status = "exited"
+
 	// StatusStopped indicates the shed is not running
 	StatusStopped Status = "stopped"
 
@@ -39,6 +42,8 @@ func (s Status) Icon() string {
 		return "⚡"
 	case StatusError:
 		return "❌"
+	case StatusExited:
+		return "⏹️"
 	case StatusStopped:
 		return "⏸️"
 	default:

@@ -229,6 +229,8 @@ func (m Model) styleStatus(status domain.Status) lipgloss.Style {
 		return styleStatusExecuting
 	case domain.StatusError:
 		return styleStatusError
+	case domain.StatusExited:
+		return styleStatusExited
 	case domain.StatusStopped:
 		return styleStatusStopped
 	default:

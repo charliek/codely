@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/google/uuid"
 
+	"github.com/charliek/codely/internal/debug"
 	"github.com/charliek/codely/internal/domain"
 	"github.com/charliek/codely/internal/shed"
 	"github.com/charliek/codely/internal/status"
@@ -78,6 +79,7 @@ func (m *Model) pollStatusCmd() tea.Cmd {
 			}
 		}
 
+		debug.Log("pollStatus: panes=%d sessions=%d", len(paneMap), len(updates))
 		return StatusUpdateMsg{Updates: updates, ExitCodes: exitCodes}
 	}
 }
@@ -138,6 +140,7 @@ func (m *Model) createPaneCmd(project *domain.Project, session *domain.Session) 
 	shedName := project.ShedName
 	cmdExec := session.Command.Exec
 	cmdArgs := session.Command.Args
+	currentManagerWidth := m.managerWidth
 
 	return func() tea.Msg {
 		var paneID int
@@ -145,6 +148,9 @@ func (m *Model) createPaneCmd(project *domain.Project, session *domain.Session) 
 		var hiddenProjectID string
 		var hiddenSessionID string
 		var hiddenPaneID int
+		var detectedWidth int
+
+		debug.Log("createPane: project=%s session=%s codelyPaneID=%d managerWidth=%d", projectID, sessionID, m.codelyPaneID, currentManagerWidth)
 
 		// Determine the directory and command
 		var dir string
@@ -178,7 +184,7 @@ func (m *Model) createPaneCmd(project *domain.Project, session *domain.Session) 
 		panes, listErr := m.tmux.ListPanes()
 		if listErr == nil {
 			codelyWindowID := m.codelyWindowID
-			if codelyWindowID == "" && m.codelyPaneID > 0 {
+			if codelyWindowID == "" && m.codelyPaneID >= 0 {
 				for _, p := range panes {
 					if p.ID == m.codelyPaneID {
 						codelyWindowID = p.WindowID
@@ -211,17 +217,32 @@ func (m *Model) createPaneCmd(project *domain.Project, session *domain.Session) 
 				}
 			}
 		}
+		debug.Log("createPane: existingTerminalPaneID=%d existingSessionID=%s", existingTerminalPaneID, existingSessionID)
+
+		// Determine the target width for the codely pane after split
+		if existingTerminalPaneID > 0 && m.codelyPaneID >= 0 {
+			// Query current width before we break the pane (after break, codely goes full-width)
+			w, wErr := m.tmux.GetPaneWidth(m.codelyPaneID)
+			debug.Log("createPane: GetPaneWidth(%d)=%d err=%v", m.codelyPaneID, w, wErr)
+			if wErr == nil && w > 0 {
+				detectedWidth = w
+			}
+		}
+		if detectedWidth == 0 {
+			detectedWidth = currentManagerWidth
+		}
 
 		if existingTerminalPaneID > 0 {
 			// Hide the currently visible terminal pane using break-pane
 			newPaneID, breakErr := m.tmux.BreakPane(existingTerminalPaneID)
 			if breakErr != nil {
 				// If the window is zoomed, break-pane can fail. Try unzooming once.
-				if m.codelyPaneID > 0 {
+				if m.codelyPaneID >= 0 {
 					_ = m.tmux.ToggleZoom(m.codelyPaneID)
 					newPaneID, breakErr = m.tmux.BreakPane(existingTerminalPaneID)
 				}
 			}
+			debug.Log("createPane: BreakPane(%d) newPaneID=%d err=%v", existingTerminalPaneID, newPaneID, breakErr)
 			if breakErr != nil {
 				return PaneCreatedMsg{
 					ProjectID: projectID,
@@ -234,13 +255,20 @@ func (m *Model) createPaneCmd(project *domain.Project, session *domain.Session) 
 		}
 
 		// Split from Codely's pane (horizontal split to the right)
-		if m.codelyPaneID > 0 {
+		if m.codelyPaneID >= 0 {
 			paneID, err = m.tmux.SplitPane(m.codelyPaneID, false, dir, execCmd, execArgs...)
 		} else {
 			paneID, err = m.tmux.SplitWindow(dir, execCmd, execArgs...)
 		}
+		debug.Log("createPane: SplitPane(%d) newPaneID=%d err=%v", m.codelyPaneID, paneID, err)
 		if paneID > 0 {
 			_ = m.tmux.SetRemainOnExit(paneID, true)
+		}
+
+		// Restore codely pane to its previous width (tmux defaults to 50/50 on split)
+		if m.codelyPaneID >= 0 && detectedWidth > 0 {
+			resizeErr := m.tmux.ResizePane(m.codelyPaneID, detectedWidth)
+			debug.Log("createPane: ResizePane(%d, %d) err=%v", m.codelyPaneID, detectedWidth, resizeErr)
 		}
 
 		return PaneCreatedMsg{
@@ -250,6 +278,7 @@ func (m *Model) createPaneCmd(project *domain.Project, session *domain.Session) 
 			HiddenProjectID: hiddenProjectID,
 			HiddenSessionID: hiddenSessionID,
 			HiddenPaneID:    hiddenPaneID,
+			DetectedWidth:   detectedWidth,
 			Err:             err,
 		}
 	}
@@ -258,6 +287,7 @@ func (m *Model) createPaneCmd(project *domain.Project, session *domain.Session) 
 // killPaneCmd kills a tmux pane
 func (m *Model) killPaneCmd(project *domain.Project, session *domain.Session) tea.Cmd {
 	return func() tea.Msg {
+		debug.Log("killPane: session=%s paneID=%d", session.ID, session.PaneID)
 		if session.PaneID > 0 {
 			_ = m.tmux.KillPane(session.PaneID)
 		}
@@ -273,15 +303,31 @@ func (m *Model) killPaneCmd(project *domain.Project, session *domain.Session) te
 func (m *Model) focusPaneCmd(paneID int) tea.Cmd {
 	return func() tea.Msg {
 		err := m.tmux.FocusPane(paneID)
+		debug.Log("focusPane: paneID=%d err=%v", paneID, err)
 		return FocusPaneMsg{PaneID: paneID, Err: err}
 	}
 }
 
 // swapPanesCmd swaps a hidden session to be visible and hides the currently visible one
 func (m *Model) swapPanesCmd(showProject *domain.Project, showSession *domain.Session, hideProject *domain.Project, hideSession *domain.Session) tea.Cmd {
+	currentManagerWidth := m.managerWidth
+
 	return func() tea.Msg {
+		debug.Log("swapPanes: show=%s hide=%s codelyPaneID=%d", showSession.ID, hideSession.ID, m.codelyPaneID)
+
+		// Query codely pane width before breaking (after break, codely goes full-width)
+		detectedWidth := currentManagerWidth
+		if m.codelyPaneID >= 0 {
+			w, wErr := m.tmux.GetPaneWidth(m.codelyPaneID)
+			debug.Log("swapPanes: GetPaneWidth(%d)=%d err=%v", m.codelyPaneID, w, wErr)
+			if wErr == nil && w > 0 {
+				detectedWidth = w
+			}
+		}
+
 		// First, break the currently visible pane to hide it
 		hiddenPaneID, err := m.tmux.BreakPane(hideSession.PaneID)
+		debug.Log("swapPanes: BreakPane(%d) newPaneID=%d err=%v", hideSession.PaneID, hiddenPaneID, err)
 		if err != nil {
 			return PaneSwappedMsg{
 				ShownProjectID:  showProject.ID,
@@ -292,12 +338,19 @@ func (m *Model) swapPanesCmd(showProject *domain.Project, showSession *domain.Se
 
 		// Then, join the hidden pane back to the main window
 		shownPaneID, err := m.tmux.JoinPane(showSession.PaneID, m.codelyPaneID)
+		debug.Log("swapPanes: JoinPane(%d, %d) newPaneID=%d err=%v", showSession.PaneID, m.codelyPaneID, shownPaneID, err)
 		if err != nil {
 			return PaneSwappedMsg{
 				ShownProjectID:  showProject.ID,
 				HiddenProjectID: hideProject.ID,
 				Err:             err,
 			}
+		}
+
+		// Restore codely pane width (tmux defaults to 50/50 on join)
+		if m.codelyPaneID >= 0 && detectedWidth > 0 {
+			resizeErr := m.tmux.ResizePane(m.codelyPaneID, detectedWidth)
+			debug.Log("swapPanes: ResizePane(%d, %d) err=%v", m.codelyPaneID, detectedWidth, resizeErr)
 		}
 
 		if resolved, ok := m.visiblePaneInCodelyWindow(); ok {
@@ -311,19 +364,29 @@ func (m *Model) swapPanesCmd(showProject *domain.Project, showSession *domain.Se
 			ShownPaneID:     shownPaneID,
 			HiddenSessionID: hideSession.ID,
 			HiddenPaneID:    hiddenPaneID,
+			DetectedWidth:   detectedWidth,
 		}
 	}
 }
 
 // showPaneCmd brings a hidden pane back into the main window without hiding another.
 func (m *Model) showPaneCmd(showProject *domain.Project, showSession *domain.Session) tea.Cmd {
+	currentManagerWidth := m.managerWidth
+
 	return func() tea.Msg {
 		shownPaneID, err := m.tmux.JoinPane(showSession.PaneID, m.codelyPaneID)
+		debug.Log("showPane: JoinPane(%d, %d) newPaneID=%d err=%v", showSession.PaneID, m.codelyPaneID, shownPaneID, err)
 		if err != nil {
 			return PaneSwappedMsg{
 				ShownProjectID: showProject.ID,
 				Err:            err,
 			}
+		}
+
+		// Restore codely pane width (tmux defaults to 50/50 on join)
+		if m.codelyPaneID >= 0 && currentManagerWidth > 0 {
+			resizeErr := m.tmux.ResizePane(m.codelyPaneID, currentManagerWidth)
+			debug.Log("showPane: ResizePane(%d, %d) err=%v", m.codelyPaneID, currentManagerWidth, resizeErr)
 		}
 
 		if resolved, ok := m.visiblePaneInCodelyWindow(); ok {
@@ -334,13 +397,14 @@ func (m *Model) showPaneCmd(showProject *domain.Project, showSession *domain.Ses
 			ShownProjectID: showProject.ID,
 			ShownSessionID: showSession.ID,
 			ShownPaneID:    shownPaneID,
+			DetectedWidth:  currentManagerWidth,
 		}
 	}
 }
 
 func (m *Model) visiblePaneInCodelyWindow() (int, bool) {
 	panes, err := m.tmux.ListPanes()
-	if err != nil || m.codelyPaneID == 0 {
+	if err != nil || m.codelyPaneID < 0 {
 		return 0, false
 	}
 
@@ -379,7 +443,7 @@ func (m *Model) syncVisibilityCmd() tea.Cmd {
 		}
 
 		codelyWindowID := m.codelyWindowID
-		if codelyWindowID == "" && m.codelyPaneID > 0 {
+		if codelyWindowID == "" && m.codelyPaneID >= 0 {
 			for _, p := range panes {
 				if p.ID == m.codelyPaneID {
 					codelyWindowID = p.WindowID
@@ -404,6 +468,7 @@ func (m *Model) syncVisibilityCmd() tea.Cmd {
 			}
 		}
 
+		debug.Log("syncVisibility: codelyWindowID=%s visibleSessionID=%s", codelyWindowID, visibleSessionID)
 		return VisibilitySyncedMsg{
 			VisibleSessionID: visibleSessionID,
 			Err:              nil,

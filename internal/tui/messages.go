@@ -23,6 +23,7 @@ type PaneCreatedMsg struct {
 	HiddenProjectID  string   // Project that was hidden (break-pane) in single visible pane mode
 	HiddenSessionID  string   // Session that was hidden (break-pane) in single visible pane mode
 	HiddenPaneID     int      // New pane ID of the hidden session (pane ID changes after break)
+	DetectedWidth    int      // Width of codely pane before break (to restore after split)
 	Err              error
 }
 
@@ -96,6 +97,7 @@ type PaneSwappedMsg struct {
 	ShownPaneID     int    // New pane ID of the shown session
 	HiddenSessionID string // Session that was hidden
 	HiddenPaneID    int    // New pane ID of the hidden session
+	DetectedWidth   int    // Width of codely pane before swap (to restore after join)
 	Err             error
 }
 

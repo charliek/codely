@@ -22,8 +22,10 @@ type MockClient struct {
 	CapturePaneErr     error
 	ListPanesResult    []PaneInfo
 	ListPanesErr       error
-	PaneExistsResult   bool
-	StatusRightResult  string
+	PaneExistsResult      bool
+	GetPaneWidthResult    int
+	GetPaneWidthErr       error
+	StatusRightResult     string
 	StatusRightErr     error
 	SetStatusRightErr  error
 	BindJumpKeyErr     error
@@ -48,7 +50,8 @@ func NewMockClient() *MockClient {
 		BreakPanePaneID:   100, // Different ID to simulate pane ID change
 		JoinPanePaneID:    101, // Different ID to simulate pane ID change
 		ListPanesResult:   []PaneInfo{},
-		PaneExistsResult:  true,
+		PaneExistsResult:   true,
+		GetPaneWidthResult: 38,
 	}
 }
 
@@ -119,6 +122,11 @@ func (m *MockClient) ListPanes() ([]PaneInfo, error) {
 func (m *MockClient) PaneExists(paneID int) bool {
 	m.recordCall("PaneExists", paneID)
 	return m.PaneExistsResult
+}
+
+func (m *MockClient) GetPaneWidth(paneID int) (int, error) {
+	m.recordCall("GetPaneWidth", paneID)
+	return m.GetPaneWidthResult, m.GetPaneWidthErr
 }
 
 func (m *MockClient) GetStatusRight() (string, error) {

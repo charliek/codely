@@ -91,6 +91,7 @@ type Model struct {
 	// Pane tracking for layout management
 	codelyPaneID   int    // The pane running Codely (used for splitting)
 	codelyWindowID string // The tmux window containing Codely
+	managerWidth   int    // Current width of the codely pane (tracks manual resizes)
 
 	// tmux status bar notifications
 	statusBarLast string
@@ -149,6 +150,7 @@ func NewModel(cfg *config.Config, store *store.Store, tmuxClient tmux.Client, sh
 		shedCreateRepo: shedCreateRepo,
 		codelyPaneID:   codelyPaneID,
 		codelyWindowID: codelyWindowID,
+		managerWidth:   cfg.UI.ManagerWidth,
 		statusBarKeys:  make(map[string]int),
 	}
 }

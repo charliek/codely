@@ -4,6 +4,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/charliek/codely/internal/debug"
 	"github.com/charliek/codely/internal/domain"
 	"github.com/charliek/codely/internal/shed"
 	"github.com/charliek/codely/internal/tui/components"
@@ -70,6 +71,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = msg.Err
 		} else {
 			m.handlePaneCreated(msg)
+			if msg.DetectedWidth > 0 {
+				m.managerWidth = msg.DetectedWidth
+			}
 			// Focus the new pane
 			cmds = append(cmds, m.focusPaneCmd(msg.PaneID))
 		}
@@ -92,6 +96,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = msg.Err
 		} else {
 			m.handlePaneSwapped(msg)
+			if msg.DetectedWidth > 0 {
+				m.managerWidth = msg.DetectedWidth
+			}
 			// Focus the now-visible pane
 			cmds = append(cmds, m.focusPaneCmd(msg.ShownPaneID))
 		}
@@ -824,6 +831,7 @@ func (m *Model) handleProjectCreated(proj *domain.Project) {
 }
 
 func (m *Model) handlePaneCreated(msg PaneCreatedMsg) {
+	debug.Log("handlePaneCreated: session=%s paneID=%d hiddenSession=%s hiddenPaneID=%d detectedWidth=%d", msg.SessionID, msg.PaneID, msg.HiddenSessionID, msg.HiddenPaneID, msg.DetectedWidth)
 	proj, err := m.store.GetProject(msg.ProjectID)
 	if err != nil {
 		return
@@ -874,10 +882,12 @@ func (m *Model) handlePaneCreated(msg PaneCreatedMsg) {
 }
 
 func (m *Model) handlePaneKilled(msg PaneKilledMsg) {
+	debug.Log("handlePaneKilled: session=%s project=%s", msg.SessionID, msg.ProjectID)
 	// Session already removed from store in the confirm handler
 }
 
 func (m *Model) handlePaneSwapped(msg PaneSwappedMsg) {
+	debug.Log("handlePaneSwapped: shown=%s shownPaneID=%d hidden=%s hiddenPaneID=%d detectedWidth=%d", msg.ShownSessionID, msg.ShownPaneID, msg.HiddenSessionID, msg.HiddenPaneID, msg.DetectedWidth)
 	// Clear visibility for all sessions (single visible pane)
 	for _, p := range m.store.Projects() {
 		for i := range p.Sessions {
@@ -912,6 +922,7 @@ func (m *Model) handlePaneSwapped(msg PaneSwappedMsg) {
 }
 
 func (m *Model) handleVisibilitySynced(msg VisibilitySyncedMsg) {
+	debug.Log("handleVisibilitySynced: visibleSession=%s", msg.VisibleSessionID)
 	for _, p := range m.store.Projects() {
 		for i := range p.Sessions {
 			p.Sessions[i].IsVisible = p.Sessions[i].ID == msg.VisibleSessionID

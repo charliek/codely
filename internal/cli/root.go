@@ -18,7 +18,8 @@ var Version = "dev"
 // Global flags
 var (
 	configPath string
-	verbose    bool
+	debugMode  bool
+	debugFile  string
 )
 
 // rootCmd represents the base command
@@ -48,7 +49,8 @@ func Execute() {
 func init() {
 	// Persistent flags available to all subcommands
 	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", constants.DefaultConfigPath, "Config file path")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
+	rootCmd.PersistentFlags().BoolVarP(&debugMode, "debug", "d", false, "Enable debug logging to file")
+	rootCmd.PersistentFlags().StringVar(&debugFile, "debug-file", "~/.local/state/codely/debug.log", "Debug log file path")
 
 	// Set version template
 	rootCmd.SetVersionTemplate("codely version {{.Version}}\n")
@@ -68,5 +70,5 @@ func runApp(cmd *cobra.Command, args []string) error {
 	}
 
 	// Run TUI
-	return tui.Run(cfg, constants.DefaultStatePath)
+	return tui.Run(cfg, constants.DefaultStatePath, debugMode, debugFile)
 }

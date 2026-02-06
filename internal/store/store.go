@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/charliek/codely/internal/debug"
 	"github.com/charliek/codely/internal/domain"
 	"github.com/charliek/codely/internal/pathutil"
 	"github.com/charliek/codely/internal/tmux"
@@ -248,8 +249,10 @@ func (s *Store) ReconnectSessions(tmuxClient tmux.Client) {
 	for _, p := range panes {
 		paneMap[p.ID] = true
 	}
+	debug.Log("reconnectSessions: panes=%d", len(paneMap))
 
 	for _, p := range s.state.Projects {
+		before := len(p.Sessions)
 		var liveSessions []domain.Session
 		for _, sess := range p.Sessions {
 			if sess.PaneID > 0 && paneMap[sess.PaneID] {
@@ -257,6 +260,7 @@ func (s *Store) ReconnectSessions(tmuxClient tmux.Client) {
 			}
 		}
 		p.Sessions = liveSessions
+		debug.Log("reconnectSessions: project=%s before=%d after=%d", p.Name, before, len(liveSessions))
 	}
 }
 

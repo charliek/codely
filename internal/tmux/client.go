@@ -45,6 +45,7 @@ type Client interface {
 	// Information
 	ListPanes() ([]PaneInfo, error)
 	PaneExists(paneID int) bool
+	GetPaneWidth(paneID int) (int, error)
 
 	// Status bar + key binding
 	GetStatusRight() (string, error)
@@ -322,6 +323,22 @@ func (c *DefaultClient) PaneExists(paneID int) bool {
 		}
 	}
 	return false
+}
+
+// GetPaneWidth returns the current width of the specified pane in characters
+func (c *DefaultClient) GetPaneWidth(paneID int) (int, error) {
+	cmd := exec.Command("tmux", "display-message", "-t", fmt.Sprintf("%%%d", paneID), "-p", "#{pane_width}")
+	output, err := cmd.Output()
+	if err != nil {
+		return 0, fmt.Errorf("display-message failed: %w", err)
+	}
+
+	width, err := strconv.Atoi(strings.TrimSpace(string(output)))
+	if err != nil {
+		return 0, fmt.Errorf("parsing pane width %q: %w", strings.TrimSpace(string(output)), err)
+	}
+
+	return width, nil
 }
 
 // BreakPane moves a pane to its own background window

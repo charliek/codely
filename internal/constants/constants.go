@@ -15,7 +15,7 @@ const (
 // UI defaults
 const (
 	// DefaultManagerWidth is the default width of the manager panel in characters
-	DefaultManagerWidth = 30
+	DefaultManagerWidth = 38
 
 	// DefaultStatusPollInterval is the default interval for polling session status
 	DefaultStatusPollInterval = 1 * time.Second

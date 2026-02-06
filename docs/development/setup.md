@@ -38,7 +38,7 @@ Requires [golangci-lint](https://golangci-lint.run/). The project configuration 
 
 ## Project Structure
 
-```
+```text
 codely/
 ├── cmd/codely/            # Entry point
 │   └── main.go
@@ -66,7 +66,7 @@ codely/
 
 ## Documentation Site
 
-The documentation site uses [MkDocs](https://www.mkdocs.org/) with the [Material](https://squidfun.github.io/mkdocs-material/) theme. It requires Python and [uv](https://docs.astral.sh/uv/).
+The documentation site uses [MkDocs](https://www.mkdocs.org/) with the [Material](https://squidfunk.github.io/mkdocs-material/) theme. It requires Python and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 # Install dependencies

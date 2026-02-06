@@ -39,6 +39,6 @@ codely --version
 
 ## Behavior
 
-If codely is launched outside of a tmux session, it creates a new tmux session named `codely` and attaches to it. If already inside tmux, it runs directly in the current session.
+If codely is launched outside a tmux session, it creates a new tmux session named `codely` and attaches to it. If already inside tmux, it runs directly in the current session.
 
 On startup, codely loads saved state from `~/.local/state/codely/session.json` and reconnects to any tmux panes that still exist.

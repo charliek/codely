@@ -29,7 +29,7 @@ Create a new release by generating a changelog entry, committing it, and pushing
    - Read the current CHANGELOG.md
    - Add a new section at the top (after the header) with the version and changes
    - Format:
-     ```
+     ```markdown
      ## vX.Y.Z
 
      - Change 1
@@ -43,7 +43,7 @@ Create a new release by generating a changelog entry, committing it, and pushing
 
 7. **Create and push tag**: Trigger the release workflow
    - Create tag: `git tag vX.Y.Z`
-   - Push commit and tag: `git push && git push --tags`
+   - Push commit and tag: `git push --follow-tags`
 
 8. **Confirm success**: Show the release URL
    - Display: `https://github.com/charliek/codely/releases/tag/vX.Y.Z`

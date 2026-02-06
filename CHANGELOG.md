@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.2
+
+- Fix select-pane failure after terminal exits
+- Remove help hint and tmux tip from footer status bar
+
 ## v0.0.1
 
 - Initial Codely TUI with tmux pane management

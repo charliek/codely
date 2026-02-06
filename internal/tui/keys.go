@@ -5,12 +5,12 @@ import "github.com/charmbracelet/bubbles/key"
 // KeyMap defines all key bindings for the application
 type KeyMap struct {
 	// Navigation
-	Up     key.Binding
-	Down   key.Binding
-	Left   key.Binding
-	Right  key.Binding
-	Enter  key.Binding
-	Space  key.Binding
+	Up    key.Binding
+	Down  key.Binding
+	Left  key.Binding
+	Right key.Binding
+	Enter key.Binding
+	Space key.Binding
 
 	// Actions
 	NewProject  key.Binding

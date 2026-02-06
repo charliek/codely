@@ -13,3 +13,6 @@ codely
 /tmp/
 coverage.*
 *.test
+
+# Documentation build output
+/site-build/

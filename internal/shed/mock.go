@@ -4,13 +4,13 @@ import "os/exec"
 
 // MockClient is a mock implementation of Client for testing
 type MockClient struct {
-	AvailableResult  bool
-	ListShedsResult  []Shed
-	ListShedsErr     error
-	CreateShedErr    error
-	StartShedErr     error
-	StopShedErr      error
-	DeleteShedErr    error
+	AvailableResult bool
+	ListShedsResult []Shed
+	ListShedsErr    error
+	CreateShedErr   error
+	StartShedErr    error
+	StopShedErr     error
+	DeleteShedErr   error
 
 	// Track calls for verification
 	Calls []MockCall

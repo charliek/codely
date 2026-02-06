@@ -132,9 +132,6 @@ func (t *Tree) Expand() {
 	if item.Type == ItemTypeProject && !item.Project.Expanded {
 		item.Project.Expanded = true
 		t.Flatten()
-	} else if item.Type == ItemTypeSession {
-		// Move to first child if on a project
-		// Or do nothing if already on a session
 	}
 }
 

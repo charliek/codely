@@ -59,9 +59,7 @@ func Run(cfg *config.Config, storePath string, debugMode bool, debugFile string)
 	codelyPaneID := -1
 	var codelyWindowID string
 	if tmuxPane := os.Getenv("TMUX_PANE"); tmuxPane != "" {
-		if strings.HasPrefix(tmuxPane, "%") {
-			tmuxPane = tmuxPane[1:]
-		}
+		tmuxPane = strings.TrimPrefix(tmuxPane, "%")
 		if id, err := strconv.Atoi(tmuxPane); err == nil {
 			codelyPaneID = id
 		}

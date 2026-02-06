@@ -22,10 +22,10 @@ type MockClient struct {
 	CapturePaneErr     error
 	ListPanesResult    []PaneInfo
 	ListPanesErr       error
-	PaneExistsResult      bool
-	GetPaneWidthResult    int
-	GetPaneWidthErr       error
-	StatusRightResult     string
+	PaneExistsResult   bool
+	GetPaneWidthResult int
+	GetPaneWidthErr    error
+	StatusRightResult  string
 	StatusRightErr     error
 	SetStatusRightErr  error
 	BindJumpKeyErr     error
@@ -44,12 +44,12 @@ type MockCall struct {
 // NewMockClient creates a new mock client with sensible defaults
 func NewMockClient() *MockClient {
 	return &MockClient{
-		InTmuxResult:      true,
-		SplitWindowPaneID: 1,
-		SplitPanePaneID:   2,
-		BreakPanePaneID:   100, // Different ID to simulate pane ID change
-		JoinPanePaneID:    101, // Different ID to simulate pane ID change
-		ListPanesResult:   []PaneInfo{},
+		InTmuxResult:       true,
+		SplitWindowPaneID:  1,
+		SplitPanePaneID:    2,
+		BreakPanePaneID:    100, // Different ID to simulate pane ID change
+		JoinPanePaneID:     101, // Different ID to simulate pane ID change
+		ListPanesResult:    []PaneInfo{},
 		PaneExistsResult:   true,
 		GetPaneWidthResult: 38,
 	}

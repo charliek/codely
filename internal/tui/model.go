@@ -68,10 +68,9 @@ type Model struct {
 	shedIdx int         // Selected shed index
 
 	// Shed create state
-	shedCreateName   textinput.Model
-	shedCreateRepo   textinput.Model
-	shedCreateServer int // Index into server list
-	shedCreateFocus  int // 0=name, 1=repo, 2=server
+	shedCreateName  textinput.Model
+	shedCreateRepo  textinput.Model
+	shedCreateFocus int // 0=name, 1=repo, 2=server
 
 	// Shed close state
 	shedCloseOption int // 0=close only, 1=stop, 2=delete
@@ -81,7 +80,6 @@ type Model struct {
 
 	// Confirm state
 	confirmAction  ConfirmAction
-	confirmTarget  string // Project or session ID
 	confirmProject *domain.Project
 	confirmSession *domain.Session
 

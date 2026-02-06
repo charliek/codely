@@ -585,7 +585,7 @@ func (m Model) helpView() string {
 
 // helpLine returns the footer help text
 func (m Model) helpLine() string {
-	return "[n]ew project [t]erminal [x]close [?]help [q]uit | tmux: prefix+z zoom"
+	return "[n]ew project [t]erminal [x]close [q]uit"
 }
 
 // versionString returns the version string for the header

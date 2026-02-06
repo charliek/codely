@@ -298,7 +298,8 @@ func (m Model) handleEnter() (tea.Model, tea.Cmd) {
 		for _, proj := range m.store.Projects() {
 			for i := range proj.Sessions {
 				sess := &proj.Sessions[i]
-				if sess.ID != item.Session.ID && sess.PaneID > 0 && sess.IsVisible {
+				if sess.ID != item.Session.ID && sess.PaneID > 0 && sess.IsVisible &&
+					sess.Status != domain.StatusExited && sess.Status != domain.StatusError {
 					visibleSession = sess
 					visibleProject = proj
 					break
@@ -801,6 +802,9 @@ func (m *Model) applyStatusUpdates(updates map[string]domain.Status) {
 				proj.Sessions[i].Status = status
 				if status != domain.StatusError {
 					proj.Sessions[i].ExitCode = nil
+				}
+				if status == domain.StatusExited {
+					proj.Sessions[i].IsVisible = false
 				}
 			}
 		}

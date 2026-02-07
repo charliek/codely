@@ -203,11 +203,10 @@ func (m Model) renderSession(sess *domain.Session) string {
 	}
 
 	// Status with icon
-	statusLabel := string(sess.Status)
+	statusStr := sess.Status.Icon()
 	if sess.Status == domain.StatusError && sess.ExitCode != nil {
-		statusLabel = fmt.Sprintf("%s (%d)", statusLabel, *sess.ExitCode)
+		statusStr = fmt.Sprintf("%s (%d)", statusStr, *sess.ExitCode)
 	}
-	statusStr := sess.Status.Icon() + " " + statusLabel
 	statusStyled := m.styleStatus(sess.Status).Render(statusStr)
 
 	name := sess.Command.DisplayName

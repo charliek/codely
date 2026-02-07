@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.0.3
+
+- Reduce default manager panel width from 38 to 30
+- Remove status text labels from terminal list, show only icons
+
 ## v0.0.2
 
 - Fix select-pane failure after terminal exits

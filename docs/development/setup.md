@@ -2,9 +2,19 @@
 
 ## Prerequisites
 
+This project uses [mise](https://mise.jdx.dev/) to manage tool versions. With mise installed, all dependencies are set up automatically:
+
+```bash
+mise install
+```
+
+This installs the correct versions of Go and golangci-lint as defined in `.mise.toml`.
+
+Alternatively, install manually:
+
 - Go 1.24+
 - tmux
-- golangci-lint (for linting)
+- golangci-lint v2 (`brew install golangci-lint` on macOS, or see [install docs](https://golangci-lint.run/docs/welcome/install/))
 
 ## Build
 
@@ -34,7 +44,7 @@ Runs all Go tests with verbose output.
 make lint
 ```
 
-Requires [golangci-lint](https://golangci-lint.run/). The project configuration is in `.golangci.yml`.
+Requires [golangci-lint v2](https://golangci-lint.run/). The project configuration is in `.golangci.yml`.
 
 ## Project Structure
 

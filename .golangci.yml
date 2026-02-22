@@ -1,22 +1,27 @@
+version: "2"
+
 linters:
+  default: none
   enable:
     - errcheck
     - staticcheck
     - unused
     - govet
     - ineffassign
+    - misspell
+  exclusions:
+    presets:
+      - std-error-handling
+      - common-false-positives
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+      - path: _test\.go
+        linters:
+          - unused
+
+formatters:
+  enable:
     - gofmt
     - goimports
-    - gosimple
-    - misspell
-
-issues:
-  exclude-rules:
-    # Exclude errcheck in test files - common practice
-    - path: _test\.go
-      linters:
-        - errcheck
-    # Exclude unused in test files - test helpers are often unused
-    - path: _test\.go
-      linters:
-        - unused

@@ -317,8 +317,8 @@ func (m Model) commandPickerView() string {
 
 	b.WriteString(styleDialogTitle.Render("Add Terminal"))
 	b.WriteString("\n\n")
-	b.WriteString(fmt.Sprintf("Project: %s\n", styleProjectName.Render(projName)))
-	b.WriteString(fmt.Sprintf("Path: %s\n\n", styleProjectPath.Render(projPath)))
+	fmt.Fprintf(&b, "Project: %s\n", styleProjectName.Render(projName))
+	fmt.Fprintf(&b, "Path: %s\n\n", styleProjectPath.Render(projPath))
 	b.WriteString("Select command:\n\n")
 
 	for i, id := range m.commandKeys {
@@ -402,7 +402,7 @@ func (m Model) shedPickerView() string {
 					statusStyled = styleStatusStopped.Render(statusStr)
 				}
 
-				b.WriteString(fmt.Sprintf("%s    %s\n", line, statusStyled))
+				fmt.Fprintf(&b, "%s    %s\n", line, statusStyled)
 			}
 			b.WriteString("\n")
 		}
@@ -467,7 +467,7 @@ func (m Model) shedCloseView() string {
 
 	b.WriteString(styleDialogTitle.Render("Close Shed Project"))
 	b.WriteString("\n\n")
-	b.WriteString(fmt.Sprintf("Project: %s\n\n", styleProjectName.Render(projName)))
+	fmt.Fprintf(&b, "Project: %s\n\n", styleProjectName.Render(projName))
 	b.WriteString("What would you like to do?\n\n")
 
 	options := []struct {
@@ -517,7 +517,7 @@ func (m Model) confirmView() string {
 		if m.confirmProject != nil {
 			projName = m.confirmProject.Name
 		}
-		b.WriteString(fmt.Sprintf("Close %s in %s?", sessionName, projName))
+		fmt.Fprintf(&b, "Close %s in %s?", sessionName, projName)
 
 	case ConfirmCloseProject:
 		projName := "unknown"
@@ -526,7 +526,7 @@ func (m Model) confirmView() string {
 			projName = m.confirmProject.Name
 			sessionCount = len(m.confirmProject.Sessions)
 		}
-		b.WriteString(fmt.Sprintf("Close project %s and all %d sessions?", projName, sessionCount))
+		fmt.Fprintf(&b, "Close project %s and all %d sessions?", projName, sessionCount)
 
 	case ConfirmDeleteShed:
 		shedName := "unknown"

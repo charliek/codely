@@ -46,22 +46,28 @@ See `docs/status-detection.md` for status values, auto-detection, and overrides.
 
 ## Development
 
+### Prerequisites
+
+This project uses [mise](https://mise.jdx.dev/) to manage tool versions. With mise installed, all dependencies are set up automatically:
+
 ```bash
-# Build
-make build
+mise install
+```
 
-# Run tests
-make test
+This installs the correct versions of Go and golangci-lint as defined in `.mise.toml`.
 
-# Run linter
-make lint
+Alternatively, install manually:
+- Go 1.24+
+- golangci-lint v2 (`brew install golangci-lint` on macOS, or see [install docs](https://golangci-lint.run/docs/welcome/install/))
 
-# Clean build artifacts
-make clean
+```bash
+make build    # Build the binary
+make test     # Run tests
+make lint     # Run linters
+make clean    # Remove build artifacts
 ```
 
 ## Requirements
 
-- Go 1.24+
 - tmux (required)
 - shed CLI (optional, for remote container support)

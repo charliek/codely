@@ -1,10 +1,14 @@
 package shed
 
 import (
+	"encoding/json"
+	"fmt"
+	"os/exec"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMockClient(t *testing.T) {
@@ -98,6 +102,7 @@ func TestShedStruct(t *testing.T) {
 		Status:    "running",
 		CreatedAt: now,
 		Repo:      "user/repo",
+		Backend:   "docker",
 	}
 
 	assert.Equal(t, "test-shed", s.Name)
@@ -105,4 +110,61 @@ func TestShedStruct(t *testing.T) {
 	assert.Equal(t, "running", s.Status)
 	assert.Equal(t, now, s.CreatedAt)
 	assert.Equal(t, "user/repo", s.Repo)
+	assert.Equal(t, "docker", s.Backend)
+}
+
+func TestShedStructJSON(t *testing.T) {
+	input := `{"name":"test","server":"mini","status":"running","created_at":"2025-01-01T00:00:00Z","backend":"firecracker"}`
+
+	var s Shed
+	require.NoError(t, json.Unmarshal([]byte(input), &s))
+
+	assert.Equal(t, "test", s.Name)
+	assert.Equal(t, "mini", s.Server)
+	assert.Equal(t, "running", s.Status)
+	assert.Equal(t, "firecracker", s.Backend)
+}
+
+func TestShedStructJSON_OmitsEmptyBackend(t *testing.T) {
+	s := Shed{Name: "test", Server: "mini", Status: "running"}
+
+	data, err := json.Marshal(s)
+	require.NoError(t, err)
+
+	assert.NotContains(t, string(data), "backend")
+}
+
+func TestParseExecError_JSONError(t *testing.T) {
+	// Use Output() so stderr is captured into ExitError.Stderr
+	cmd := exec.Command("sh", "-c", `echo '{"error":"shed not found"}' >&2; exit 1`)
+	_, err := cmd.Output()
+	require.Error(t, err)
+
+	result := parseExecError("start", err)
+	assert.Contains(t, result.Error(), "shed start: shed not found")
+}
+
+func TestParseExecError_RawStderr(t *testing.T) {
+	cmd := exec.Command("sh", "-c", `echo 'something went wrong' >&2; exit 1`)
+	// Use Output() to capture stderr into ExitError
+	_, err := cmd.Output()
+	require.Error(t, err)
+
+	result := parseExecError("stop", err)
+	assert.Contains(t, result.Error(), "something went wrong")
+}
+
+func TestParseExecError_EmptyStderr(t *testing.T) {
+	cmd := exec.Command("sh", "-c", "exit 1")
+	_, err := cmd.Output()
+	require.Error(t, err)
+
+	result := parseExecError("delete", err)
+	assert.Contains(t, result.Error(), "shed delete failed")
+}
+
+func TestParseExecError_NonExitError(t *testing.T) {
+	err := fmt.Errorf("not an exec error")
+	result := parseExecError("create", err)
+	assert.Contains(t, result.Error(), "shed create failed")
 }

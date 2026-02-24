@@ -2,7 +2,9 @@
 package shed
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -16,6 +18,7 @@ type Shed struct {
 	Status    string    `json:"status"` // "running" or "stopped"
 	CreatedAt time.Time `json:"created_at"`
 	Repo      string    `json:"repo,omitempty"`
+	Backend   string    `json:"backend,omitempty"`
 }
 
 // CreateOpts contains options for creating a new shed
@@ -44,6 +47,22 @@ type Client interface {
 	Console(shedName string) *exec.Cmd
 }
 
+// actionResult is the JSON envelope returned by shed mutation commands with --json.
+// Only Status is currently inspected; the remaining fields match the shed CLI's
+// response schema and are decoded for forward-compatibility.
+type actionResult struct {
+	Status  string          `json:"status"`
+	Action  string          `json:"action"`
+	Name    string          `json:"name,omitempty"`
+	Server  string          `json:"server,omitempty"`
+	Details json.RawMessage `json:"details,omitempty"`
+}
+
+// jsonError is the JSON error format written to stderr by the shed CLI.
+type jsonError struct {
+	Error string `json:"error"`
+}
+
 // DefaultClient implements the Client interface using the shed CLI
 type DefaultClient struct{}
 
@@ -63,32 +82,60 @@ func (c *DefaultClient) ListSheds() ([]Shed, error) {
 	cmd := exec.Command("shed", "list", "--all", "--json")
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("shed list failed: %w", err)
+		return nil, parseExecError("list", err)
 	}
 
 	var sheds []Shed
 	if err := json.Unmarshal(output, &sheds); err != nil {
-		// Try parsing as a different format (shed might return objects keyed by server)
-		var shedMap map[string][]Shed
-		if err2 := json.Unmarshal(output, &shedMap); err2 != nil {
-			return nil, fmt.Errorf("parsing shed list: %w (original: %w)", err2, err)
-		}
-
-		// Flatten the map
-		for server, serverSheds := range shedMap {
-			for i := range serverSheds {
-				serverSheds[i].Server = server
-				sheds = append(sheds, serverSheds[i])
-			}
-		}
+		return nil, fmt.Errorf("shed list: parsing response: %w", err)
 	}
 
 	return sheds, nil
 }
 
+// runJSONAction executes a shed CLI command with --json and validates the response.
+func runJSONAction(action string, args ...string) error {
+	cmd := exec.Command("shed", args...)
+	output, err := cmd.Output()
+	if err != nil {
+		return parseExecError(action, err)
+	}
+
+	var result actionResult
+	if jsonErr := json.Unmarshal(output, &result); jsonErr != nil {
+		return fmt.Errorf("shed %s: unexpected response: %w", action, jsonErr)
+	}
+	if result.Status != "ok" {
+		return fmt.Errorf("shed %s: unexpected status %q", action, result.Status)
+	}
+
+	return nil
+}
+
+// parseExecError extracts a structured error message from a shed CLI command failure.
+// When --json is used, the shed CLI writes {"error": "..."} to stderr on failure.
+func parseExecError(action string, err error) error {
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) {
+		return fmt.Errorf("shed %s failed: %w", action, err)
+	}
+
+	stderr := bytes.TrimSpace(exitErr.Stderr)
+	if len(stderr) == 0 {
+		return fmt.Errorf("shed %s failed: %w", action, err)
+	}
+
+	var jsonErr jsonError
+	if parseErr := json.Unmarshal(stderr, &jsonErr); parseErr == nil && jsonErr.Error != "" {
+		return fmt.Errorf("shed %s: %s: %w", action, jsonErr.Error, err)
+	}
+
+	return fmt.Errorf("shed %s failed: %s: %w", action, string(stderr), err)
+}
+
 // CreateShed creates a new shed with the given options
 func (c *DefaultClient) CreateShed(name string, opts CreateOpts) error {
-	args := []string{"create", name}
+	args := []string{"create", name, "--json"}
 
 	if opts.Repo != "" {
 		args = append(args, "--repo", opts.Repo)
@@ -100,42 +147,31 @@ func (c *DefaultClient) CreateShed(name string, opts CreateOpts) error {
 		args = append(args, "--image", opts.Image)
 	}
 
-	cmd := exec.Command("shed", args...)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("shed create failed: %s: %w", strings.TrimSpace(string(output)), err)
-	}
-
-	return nil
+	return runJSONAction("create", args...)
 }
 
 // StartShed starts a stopped shed
 func (c *DefaultClient) StartShed(name string) error {
-	cmd := exec.Command("shed", "start", name)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("shed start failed: %s: %w", strings.TrimSpace(string(output)), err)
-	}
-	return nil
+	args := []string{"start", name, "--json"}
+	return runJSONAction("start", args...)
 }
 
 // StopShed stops a running shed
 func (c *DefaultClient) StopShed(name string) error {
-	cmd := exec.Command("shed", "stop", name)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("shed stop failed: %s: %w", strings.TrimSpace(string(output)), err)
-	}
-	return nil
+	args := []string{"stop", name, "--json"}
+	return runJSONAction("stop", args...)
 }
 
 // DeleteShed deletes a shed permanently
 func (c *DefaultClient) DeleteShed(name string, force bool) error {
 	args := []string{"delete", name}
 	if force {
-		args = append(args, "--force")
+		// shed CLI requires --force when --json is used for delete
+		args = append(args, "--force", "--json")
+		return runJSONAction("delete", args...)
 	}
 
+	// Non-force path: no --json (interactive confirmation required by shed CLI)
 	cmd := exec.Command("shed", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {

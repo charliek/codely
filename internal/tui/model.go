@@ -20,6 +20,7 @@ const (
 	ModeCommandPicker
 	ModeShedPicker
 	ModeShedCreate
+	ModeShedCreating
 	ModeShedClose
 	ModeConfirm
 	ModeHelp
@@ -68,9 +69,16 @@ type Model struct {
 	shedIdx int         // Selected shed index
 
 	// Shed create state
-	shedCreateName  textinput.Model
-	shedCreateRepo  textinput.Model
-	shedCreateFocus int // 0=name, 1=repo, 2=server
+	shedCreateName    textinput.Model
+	shedCreateRepo    textinput.Model
+	shedCreateBackend int // 0="(server default)", 1="docker", 2="firecracker"
+	shedCreateFocus   int // 0=name, 1=repo, 2=backend, 3=submit
+
+	// Shed creating (in-progress) state
+	shedCreatingName  string   // shed name being created (bridges ShedCreatedMsg → ShedsLoadedMsg)
+	shedCreatingCmd   string   // the command line string for display
+	shedCreateOutput  []string // collected stderr lines for display
+	shedCreateRetries int      // retry counter for shed-not-found polling
 
 	// Shed close state
 	shedCloseOption int // 0=close only, 1=stop, 2=delete

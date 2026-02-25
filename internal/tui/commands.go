@@ -171,10 +171,11 @@ func (m *Model) createPaneCmd(project *domain.Project, session *domain.Session) 
 				}
 			}
 
-			// Build the command string for shed exec
+			// Build the command for shed exec, keeping args separate so
+			// shellQuoteCommand quotes each arg individually.
 			cmd := m.shed.ExecCommand(shedName, cmdExec, cmdArgs...)
-			execCmd = strings.Join(cmd.Args, " ")
-			execArgs = nil
+			execCmd = cmd.Args[0]
+			execArgs = cmd.Args[1:]
 			dir = ""
 		}
 
@@ -498,13 +499,36 @@ func (m *Model) stopShedCmd(shedName string) tea.Cmd {
 	}
 }
 
-// createShedCmd creates a new shed
+// createShedCmd starts a streaming shed creation and returns a shedCreateStartedMsg.
 func (m *Model) createShedCmd(name string, opts shed.CreateOpts) tea.Cmd {
 	return func() tea.Msg {
 		if m.shed == nil {
 			return ShedCreatedMsg{ShedName: name, Err: domain.ErrShedNotFound}
 		}
-		err := m.shed.CreateShed(name, opts)
+		cmdLine, outputCh, doneCh := m.shed.CreateShedStreaming(name, opts)
+		return shedCreateStartedMsg{
+			name:     name,
+			cmdLine:  cmdLine,
+			outputCh: outputCh,
+			doneCh:   doneCh,
+		}
+	}
+}
+
+// waitForShedOutput reads one line from outputCh or the final result from doneCh.
+func waitForShedOutput(name string, outputCh <-chan string, doneCh <-chan error) tea.Cmd {
+	return func() tea.Msg {
+		line, ok := <-outputCh
+		if ok {
+			return shedCreateOutputMsg{
+				line:     line,
+				name:     name,
+				outputCh: outputCh,
+				doneCh:   doneCh,
+			}
+		}
+		// outputCh closed — read final result
+		err := <-doneCh
 		return ShedCreatedMsg{ShedName: name, Err: err}
 	}
 }

@@ -64,6 +64,22 @@ func (m *MockClient) DeleteShed(name string, force bool) error {
 	return m.DeleteShedErr
 }
 
+func (m *MockClient) CreateShedStreaming(name string, opts CreateOpts) (string, <-chan string, <-chan error) {
+	m.recordCall("CreateShedStreaming", name, opts)
+
+	cmdLine := "shed create " + name + " --json"
+	outputCh := make(chan string)
+	doneCh := make(chan error, 1)
+
+	go func() {
+		close(outputCh)
+		doneCh <- m.CreateShedErr
+		close(doneCh)
+	}()
+
+	return cmdLine, outputCh, doneCh
+}
+
 func (m *MockClient) ExecCommand(shedName, command string, args ...string) *exec.Cmd {
 	m.recordCall("ExecCommand", shedName, command, args)
 	// Return a dummy command that will work

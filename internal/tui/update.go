@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -58,6 +60,37 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = msg.Err
 		} else {
 			m.sheds = msg.Sheds
+		}
+
+		// Complete shed creation flow: find the newly created shed and create a project
+		if m.shedCreatingName != "" {
+			if msg.Err != nil {
+				// Load failed — abandon creation flow (error already set above)
+				m.shedCreatingName = ""
+				m.mode = ModeNormal
+			} else {
+				found := false
+				for _, s := range m.sheds {
+					if s.Name == m.shedCreatingName {
+						found = true
+						m.shedCreatingName = ""
+						cmds = append(cmds, m.createShedProjectCmd(s))
+						break
+					}
+				}
+				if !found {
+					m.shedCreateRetries++
+					if m.shedCreateRetries >= 5 {
+						m.err = fmt.Errorf("shed %q not found after creation", m.shedCreatingName)
+						m.shedCreatingName = ""
+						m.shedCreateRetries = 0
+						m.mode = ModeNormal
+					} else {
+						// Eventual consistency — shed not in list yet, retry
+						cmds = append(cmds, m.loadShedsCmd())
+					}
+				}
+			}
 		}
 
 	case ProjectCreatedMsg:
@@ -122,19 +155,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		cmds = append(cmds, m.loadShedsCmd())
 
+	case shedCreateStartedMsg:
+		m.shedCreatingCmd = msg.cmdLine
+		return m, waitForShedOutput(msg.name, msg.outputCh, msg.doneCh)
+
+	case shedCreateOutputMsg:
+		m.shedCreateOutput = append(m.shedCreateOutput, msg.line)
+		const maxCreateOutputLines = 200
+		if len(m.shedCreateOutput) > maxCreateOutputLines {
+			m.shedCreateOutput = m.shedCreateOutput[len(m.shedCreateOutput)-maxCreateOutputLines:]
+		}
+		return m, waitForShedOutput(msg.name, msg.outputCh, msg.doneCh)
+
 	case ShedCreatedMsg:
+		m.shedCreateRetries = 0
 		if msg.Err != nil {
 			m.err = msg.Err
+			m.shedCreatingName = ""
 			m.mode = ModeNormal
-		} else {
-			// Create project from the new shed
-			for _, s := range m.sheds {
-				if s.Name == msg.ShedName {
-					cmds = append(cmds, m.createShedProjectCmd(s))
-					break
-				}
-			}
 		}
+		// On success, just reload sheds — ShedsLoadedMsg will find the new shed
 		cmds = append(cmds, m.loadShedsCmd())
 
 	case ShedDeletedMsg:
@@ -167,6 +207,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleShedPickerKey(msg)
 	case ModeShedCreate:
 		return m.handleShedCreateKey(msg)
+	case ModeShedCreating:
+		// Ignore all keys while creation is in progress
+		return m, nil
 	case ModeShedClose:
 		return m.handleShedCloseKey(msg)
 	case ModeConfirm:
@@ -572,17 +615,29 @@ func (m Model) handleShedCreateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyTab, tea.KeyDown:
-		m.shedCreateFocus = (m.shedCreateFocus + 1) % 3
+		m.shedCreateFocus = (m.shedCreateFocus + 1) % 4
 		m.updateShedCreateFocus()
 		return m, nil
 
 	case tea.KeyShiftTab, tea.KeyUp:
-		m.shedCreateFocus = (m.shedCreateFocus + 2) % 3
+		m.shedCreateFocus = (m.shedCreateFocus + 3) % 4
 		m.updateShedCreateFocus()
 		return m, nil
 
-	case tea.KeyEnter:
+	case tea.KeyLeft:
 		if m.shedCreateFocus == 2 {
+			m.shedCreateBackend = (m.shedCreateBackend + 2) % 3
+			return m, nil
+		}
+
+	case tea.KeyRight:
+		if m.shedCreateFocus == 2 {
+			m.shedCreateBackend = (m.shedCreateBackend + 1) % 3
+			return m, nil
+		}
+
+	case tea.KeyEnter:
+		if m.shedCreateFocus == 3 {
 			// Submit
 			name := m.shedCreateName.Value()
 			if name == "" {
@@ -592,13 +647,28 @@ func (m Model) handleShedCreateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			// Get server (would need server list - for now use default)
 			server := m.config.Shed.DefaultServer
 
+			// Convert backend index to string
+			var backend string
+			switch m.shedCreateBackend {
+			case 1:
+				backend = "docker"
+			case 2:
+				backend = "firecracker"
+			}
+
+			m.shedCreatingName = name
+			m.shedCreatingCmd = ""
+			m.shedCreateOutput = nil
+			m.mode = ModeShedCreating
+
 			return m, m.createShedCmd(name, shed.CreateOpts{
-				Repo:   m.shedCreateRepo.Value(),
-				Server: server,
+				Repo:    m.shedCreateRepo.Value(),
+				Server:  server,
+				Backend: backend,
 			})
 		}
 		// Move to next field
-		m.shedCreateFocus = (m.shedCreateFocus + 1) % 3
+		m.shedCreateFocus = (m.shedCreateFocus + 1) % 4
 		m.updateShedCreateFocus()
 		return m, nil
 	}
@@ -734,6 +804,7 @@ func (m Model) handleNewProjectTypeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case 2:
 			m.mode = ModeShedCreate
 			m.shedCreateFocus = 0
+			m.shedCreateBackend = 0
 			m.shedCreateName.SetValue("")
 			m.shedCreateRepo.SetValue("")
 			m.updateShedCreateFocus()

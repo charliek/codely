@@ -64,6 +64,22 @@ type ShedDeletedMsg struct {
 	Err      error
 }
 
+// shedCreateStartedMsg carries channels from the streaming create process.
+type shedCreateStartedMsg struct {
+	name     string
+	cmdLine  string
+	outputCh <-chan string
+	doneCh   <-chan error
+}
+
+// shedCreateOutputMsg carries one stderr line and channels for chaining.
+type shedCreateOutputMsg struct {
+	line     string
+	name     string
+	outputCh <-chan string
+	doneCh   <-chan error
+}
+
 // ErrorMsg represents an error to display
 type ErrorMsg struct {
 	Err error

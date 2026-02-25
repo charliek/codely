@@ -75,9 +75,10 @@ type Model struct {
 	shedCreateFocus   int // 0=name, 1=repo, 2=backend, 3=submit
 
 	// Shed creating (in-progress) state
-	shedCreatingName string   // shed name being created (bridges ShedCreatedMsg → ShedsLoadedMsg)
-	shedCreatingCmd  string   // the command line string for display
-	shedCreateOutput []string // collected stderr lines for display
+	shedCreatingName   string   // shed name being created (bridges ShedCreatedMsg → ShedsLoadedMsg)
+	shedCreatingCmd    string   // the command line string for display
+	shedCreateOutput   []string // collected stderr lines for display
+	shedCreateRetries  int      // retry counter for shed-not-found polling
 
 	// Shed close state
 	shedCloseOption int // 0=close only, 1=stop, 2=delete

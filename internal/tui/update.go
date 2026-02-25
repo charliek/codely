@@ -4,6 +4,8 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"fmt"
+
 	"github.com/charliek/codely/internal/debug"
 	"github.com/charliek/codely/internal/domain"
 	"github.com/charliek/codely/internal/shed"
@@ -77,8 +79,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 				if !found {
-					// Eventual consistency — shed not in list yet, retry
-					cmds = append(cmds, m.loadShedsCmd())
+					m.shedCreateRetries++
+					if m.shedCreateRetries >= 5 {
+						m.err = fmt.Errorf("shed %q not found after creation", m.shedCreatingName)
+						m.shedCreatingName = ""
+						m.shedCreateRetries = 0
+						m.mode = ModeNormal
+					} else {
+						// Eventual consistency — shed not in list yet, retry
+						cmds = append(cmds, m.loadShedsCmd())
+					}
 				}
 			}
 		}
@@ -151,9 +161,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case shedCreateOutputMsg:
 		m.shedCreateOutput = append(m.shedCreateOutput, msg.line)
+		const maxCreateOutputLines = 200
+		if len(m.shedCreateOutput) > maxCreateOutputLines {
+			m.shedCreateOutput = m.shedCreateOutput[len(m.shedCreateOutput)-maxCreateOutputLines:]
+		}
 		return m, waitForShedOutput(msg.name, msg.outputCh, msg.doneCh)
 
 	case ShedCreatedMsg:
+		m.shedCreateRetries = 0
 		if msg.Err != nil {
 			m.err = msg.Err
 			m.shedCreatingName = ""

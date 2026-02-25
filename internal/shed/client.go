@@ -231,10 +231,19 @@ func (c *DefaultClient) CreateShedStreaming(name string, opts CreateOpts) (strin
 	go func() {
 		var stderrLines []string
 		scanner := bufio.NewScanner(stderrPipe)
+		scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 		for scanner.Scan() {
 			line := scanner.Text()
 			stderrLines = append(stderrLines, line)
 			outputCh <- line
+		}
+		if scanErr := scanner.Err(); scanErr != nil {
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
+			doneCh <- fmt.Errorf("shed create: reading stderr: %w", scanErr)
+			close(doneCh)
+			close(outputCh)
+			return
 		}
 		close(outputCh)
 

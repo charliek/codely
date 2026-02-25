@@ -438,9 +438,19 @@ func (m Model) shedCreateView() string {
 	b.WriteString(m.shedCreateRepo.View())
 	b.WriteString("\n\n")
 
+	// Backend selector
+	backendLabel := "Backend: "
+	if m.shedCreateFocus == 2 {
+		backendLabel = styleDialogOptionSelected.Render(backendLabel)
+	}
+	backendOptions := []string{"(server default)", "docker", "firecracker"}
+	b.WriteString(backendLabel)
+	b.WriteString(fmt.Sprintf("< %s >", backendOptions[m.shedCreateBackend]))
+	b.WriteString("\n\n")
+
 	// Server selection (simplified - just show default)
 	serverLabel := "Server: "
-	if m.shedCreateFocus == 2 {
+	if m.shedCreateFocus == 3 {
 		serverLabel = styleDialogOptionSelected.Render(serverLabel)
 	}
 	server := m.config.Shed.DefaultServer

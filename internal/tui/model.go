@@ -68,9 +68,10 @@ type Model struct {
 	shedIdx int         // Selected shed index
 
 	// Shed create state
-	shedCreateName  textinput.Model
-	shedCreateRepo  textinput.Model
-	shedCreateFocus int // 0=name, 1=repo, 2=server
+	shedCreateName    textinput.Model
+	shedCreateRepo    textinput.Model
+	shedCreateBackend int // 0="(server default)", 1="docker", 2="firecracker"
+	shedCreateFocus   int // 0=name, 1=repo, 2=backend, 3=submit
 
 	// Shed close state
 	shedCloseOption int // 0=close only, 1=stop, 2=delete

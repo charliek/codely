@@ -572,17 +572,29 @@ func (m Model) handleShedCreateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyTab, tea.KeyDown:
-		m.shedCreateFocus = (m.shedCreateFocus + 1) % 3
+		m.shedCreateFocus = (m.shedCreateFocus + 1) % 4
 		m.updateShedCreateFocus()
 		return m, nil
 
 	case tea.KeyShiftTab, tea.KeyUp:
-		m.shedCreateFocus = (m.shedCreateFocus + 2) % 3
+		m.shedCreateFocus = (m.shedCreateFocus + 3) % 4
 		m.updateShedCreateFocus()
 		return m, nil
 
-	case tea.KeyEnter:
+	case tea.KeyLeft:
 		if m.shedCreateFocus == 2 {
+			m.shedCreateBackend = (m.shedCreateBackend + 2) % 3
+			return m, nil
+		}
+
+	case tea.KeyRight:
+		if m.shedCreateFocus == 2 {
+			m.shedCreateBackend = (m.shedCreateBackend + 1) % 3
+			return m, nil
+		}
+
+	case tea.KeyEnter:
+		if m.shedCreateFocus == 3 {
 			// Submit
 			name := m.shedCreateName.Value()
 			if name == "" {
@@ -592,13 +604,23 @@ func (m Model) handleShedCreateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			// Get server (would need server list - for now use default)
 			server := m.config.Shed.DefaultServer
 
+			// Convert backend index to string
+			var backend string
+			switch m.shedCreateBackend {
+			case 1:
+				backend = "docker"
+			case 2:
+				backend = "firecracker"
+			}
+
 			return m, m.createShedCmd(name, shed.CreateOpts{
-				Repo:   m.shedCreateRepo.Value(),
-				Server: server,
+				Repo:    m.shedCreateRepo.Value(),
+				Server:  server,
+				Backend: backend,
 			})
 		}
 		// Move to next field
-		m.shedCreateFocus = (m.shedCreateFocus + 1) % 3
+		m.shedCreateFocus = (m.shedCreateFocus + 1) % 4
 		m.updateShedCreateFocus()
 		return m, nil
 	}
@@ -734,6 +756,7 @@ func (m Model) handleNewProjectTypeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case 2:
 			m.mode = ModeShedCreate
 			m.shedCreateFocus = 0
+			m.shedCreateBackend = 0
 			m.shedCreateName.SetValue("")
 			m.shedCreateRepo.SetValue("")
 			m.updateShedCreateFocus()

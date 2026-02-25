@@ -23,9 +23,10 @@ type Shed struct {
 
 // CreateOpts contains options for creating a new shed
 type CreateOpts struct {
-	Repo   string
-	Server string
-	Image  string
+	Repo    string
+	Server  string
+	Image   string
+	Backend string // "docker", "firecracker", or "" for server default
 }
 
 // Client defines the interface for shed operations
@@ -145,6 +146,9 @@ func (c *DefaultClient) CreateShed(name string, opts CreateOpts) error {
 	}
 	if opts.Image != "" {
 		args = append(args, "--image", opts.Image)
+	}
+	if opts.Backend != "" {
+		args = append(args, "--backend", opts.Backend)
 	}
 
 	return runJSONAction("create", args...)

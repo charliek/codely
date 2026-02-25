@@ -240,9 +240,9 @@ func (c *DefaultClient) CreateShedStreaming(name string, opts CreateOpts) (strin
 		if scanErr := scanner.Err(); scanErr != nil {
 			_ = cmd.Process.Kill()
 			_ = cmd.Wait()
+			close(outputCh)
 			doneCh <- fmt.Errorf("shed create: reading stderr: %w", scanErr)
 			close(doneCh)
-			close(outputCh)
 			return
 		}
 		close(outputCh)

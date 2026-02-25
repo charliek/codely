@@ -1,10 +1,10 @@
 package tui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-
-	"fmt"
 
 	"github.com/charliek/codely/internal/debug"
 	"github.com/charliek/codely/internal/domain"

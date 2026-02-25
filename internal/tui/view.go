@@ -29,6 +29,8 @@ func (m Model) View() string {
 		return m.shedPickerView()
 	case ModeShedCreate:
 		return m.shedCreateView()
+	case ModeShedCreating:
+		return m.shedCreatingView()
 	case ModeShedClose:
 		return m.shedCloseView()
 	case ModeConfirm:
@@ -448,11 +450,8 @@ func (m Model) shedCreateView() string {
 	b.WriteString(fmt.Sprintf("< %s >", backendOptions[m.shedCreateBackend]))
 	b.WriteString("\n\n")
 
-	// Server selection (simplified - just show default)
+	// Server display (not focusable)
 	serverLabel := "Server: "
-	if m.shedCreateFocus == 3 {
-		serverLabel = styleDialogOptionSelected.Render(serverLabel)
-	}
 	server := m.config.Shed.DefaultServer
 	if server == "" {
 		server = "(default)"
@@ -461,7 +460,47 @@ func (m Model) shedCreateView() string {
 	b.WriteString(server)
 	b.WriteString("\n\n")
 
+	// Submit button
+	createBtn := "[ Create ]"
+	if m.shedCreateFocus == 3 {
+		createBtn = styleDialogOptionSelected.Render(createBtn)
+	}
+	b.WriteString(createBtn)
+	b.WriteString("\n\n")
+
 	b.WriteString(styleHelp.Render("[tab] next field  [enter] create  [esc] cancel"))
+
+	return styleDialog.Render(b.String())
+}
+
+// shedCreatingView renders the creating-in-progress screen
+func (m Model) shedCreatingView() string {
+	var b strings.Builder
+
+	b.WriteString(styleDialogTitle.Render("Create New Shed"))
+	b.WriteString("\n\n")
+
+	fmt.Fprintf(&b, "Creating shed '%s'...\n\n", m.shedCreatingName)
+
+	if m.shedCreatingCmd != "" {
+		b.WriteString(styleProjectPath.Render("$ " + m.shedCreatingCmd))
+		b.WriteString("\n\n")
+	}
+
+	// Show last ~10 lines of output
+	lines := m.shedCreateOutput
+	if len(lines) > 10 {
+		lines = lines[len(lines)-10:]
+	}
+	for _, line := range lines {
+		b.WriteString(styleProjectPath.Render("> " + line))
+		b.WriteString("\n")
+	}
+	if len(lines) > 0 {
+		b.WriteString("\n")
+	}
+
+	b.WriteString(styleHelp.Render("Please wait."))
 
 	return styleDialog.Render(b.String())
 }

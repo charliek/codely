@@ -60,6 +60,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.sheds = msg.Sheds
 		}
 
+		// Complete shed creation flow: find the newly created shed and create a project
+		if m.shedCreatingName != "" {
+			for _, s := range m.sheds {
+				if s.Name == m.shedCreatingName {
+					m.shedCreatingName = ""
+					cmds = append(cmds, m.createShedProjectCmd(s))
+					break
+				}
+			}
+		}
+
 	case ProjectCreatedMsg:
 		m.handleProjectCreated(msg.Project)
 		// Immediately show command picker
@@ -122,19 +133,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		cmds = append(cmds, m.loadShedsCmd())
 
+	case shedCreateStartedMsg:
+		m.shedCreatingCmd = msg.cmdLine
+		return m, waitForShedOutput(msg.name, msg.outputCh, msg.doneCh)
+
+	case shedCreateOutputMsg:
+		m.shedCreateOutput = append(m.shedCreateOutput, msg.line)
+		return m, waitForShedOutput(msg.name, msg.outputCh, msg.doneCh)
+
 	case ShedCreatedMsg:
 		if msg.Err != nil {
 			m.err = msg.Err
+			m.shedCreatingName = ""
 			m.mode = ModeNormal
-		} else {
-			// Create project from the new shed
-			for _, s := range m.sheds {
-				if s.Name == msg.ShedName {
-					cmds = append(cmds, m.createShedProjectCmd(s))
-					break
-				}
-			}
 		}
+		// On success, just reload sheds — ShedsLoadedMsg will find the new shed
 		cmds = append(cmds, m.loadShedsCmd())
 
 	case ShedDeletedMsg:
@@ -167,6 +180,9 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleShedPickerKey(msg)
 	case ModeShedCreate:
 		return m.handleShedCreateKey(msg)
+	case ModeShedCreating:
+		// Ignore all keys while creation is in progress
+		return m, nil
 	case ModeShedClose:
 		return m.handleShedCloseKey(msg)
 	case ModeConfirm:
@@ -612,6 +628,11 @@ func (m Model) handleShedCreateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			case 2:
 				backend = "firecracker"
 			}
+
+			m.shedCreatingName = name
+			m.shedCreatingCmd = ""
+			m.shedCreateOutput = nil
+			m.mode = ModeShedCreating
 
 			return m, m.createShedCmd(name, shed.CreateOpts{
 				Repo:    m.shedCreateRepo.Value(),

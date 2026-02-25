@@ -2,6 +2,7 @@
 package shed
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -42,6 +43,9 @@ type Client interface {
 	StartShed(name string) error
 	StopShed(name string) error
 	DeleteShed(name string, force bool) error
+
+	// Streaming creation - returns command line, output channel, and done channel
+	CreateShedStreaming(name string, opts CreateOpts) (cmdLine string, outputCh <-chan string, doneCh <-chan error)
 
 	// Execution - returns *exec.Cmd so caller can set up terminal
 	ExecCommand(shedName, command string, args ...string) *exec.Cmd
@@ -190,6 +194,95 @@ func (c *DefaultClient) ExecCommand(shedName, command string, args ...string) *e
 	cmdArgs := []string{"exec", shedName, command}
 	cmdArgs = append(cmdArgs, args...)
 	return exec.Command("shed", cmdArgs...)
+}
+
+// CreateShedStreaming creates a new shed, streaming stderr output as it runs.
+// It returns the formatted command line, a channel of stderr lines, and a done
+// channel that delivers the final error (nil on success).
+func (c *DefaultClient) CreateShedStreaming(name string, opts CreateOpts) (string, <-chan string, <-chan error) {
+	args := []string{"create", name, "--json"}
+
+	if opts.Repo != "" {
+		args = append(args, "--repo", opts.Repo)
+	}
+	if opts.Server != "" {
+		args = append(args, "--server", opts.Server)
+	}
+	if opts.Image != "" {
+		args = append(args, "--image", opts.Image)
+	}
+	if opts.Backend != "" {
+		args = append(args, "--backend", opts.Backend)
+	}
+
+	cmdLine := "shed " + strings.Join(args, " ")
+
+	outputCh := make(chan string, 64)
+	doneCh := make(chan error, 1)
+
+	cmd := exec.Command("shed", args...)
+	var stdoutBuf bytes.Buffer
+	cmd.Stdout = &stdoutBuf
+
+	stderrPipe, pipeErr := cmd.StderrPipe()
+	if pipeErr != nil {
+		close(outputCh)
+		doneCh <- fmt.Errorf("shed create: stderr pipe: %w", pipeErr)
+		close(doneCh)
+		return cmdLine, outputCh, doneCh
+	}
+
+	if err := cmd.Start(); err != nil {
+		close(outputCh)
+		doneCh <- fmt.Errorf("shed create: start: %w", err)
+		close(doneCh)
+		return cmdLine, outputCh, doneCh
+	}
+
+	go func() {
+		var stderrLines []string
+		scanner := bufio.NewScanner(stderrPipe)
+		for scanner.Scan() {
+			line := scanner.Text()
+			stderrLines = append(stderrLines, line)
+			outputCh <- line
+		}
+		close(outputCh)
+
+		waitErr := cmd.Wait()
+		if waitErr != nil {
+			// Try to extract a structured error from collected stderr
+			stderrAll := strings.Join(stderrLines, "\n")
+			var jsonErr jsonError
+			if parseErr := json.Unmarshal([]byte(stderrAll), &jsonErr); parseErr == nil && jsonErr.Error != "" {
+				doneCh <- fmt.Errorf("shed create: %s: %w", jsonErr.Error, waitErr)
+			} else if len(stderrAll) > 0 {
+				doneCh <- fmt.Errorf("shed create failed: %s: %w", strings.TrimSpace(stderrAll), waitErr)
+			} else {
+				doneCh <- fmt.Errorf("shed create failed: %w", waitErr)
+			}
+			close(doneCh)
+			return
+		}
+
+		// Validate JSON response on stdout
+		var result actionResult
+		if jsonErr := json.Unmarshal(stdoutBuf.Bytes(), &result); jsonErr != nil {
+			doneCh <- fmt.Errorf("shed create: unexpected response: %w", jsonErr)
+			close(doneCh)
+			return
+		}
+		if result.Status != "ok" {
+			doneCh <- fmt.Errorf("shed create: unexpected status %q", result.Status)
+			close(doneCh)
+			return
+		}
+
+		doneCh <- nil
+		close(doneCh)
+	}()
+
+	return cmdLine, outputCh, doneCh
 }
 
 // Console returns a command that will open an interactive shell in the shed

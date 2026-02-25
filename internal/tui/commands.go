@@ -171,10 +171,11 @@ func (m *Model) createPaneCmd(project *domain.Project, session *domain.Session) 
 				}
 			}
 
-			// Build the command string for shed exec
+			// Build the command for shed exec, keeping args separate so
+			// shellQuoteCommand quotes each arg individually.
 			cmd := m.shed.ExecCommand(shedName, cmdExec, cmdArgs...)
-			execCmd = strings.Join(cmd.Args, " ")
-			execArgs = nil
+			execCmd = cmd.Args[0]
+			execArgs = cmd.Args[1:]
 			dir = ""
 		}
 

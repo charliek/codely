@@ -62,11 +62,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Complete shed creation flow: find the newly created shed and create a project
 		if m.shedCreatingName != "" {
-			for _, s := range m.sheds {
-				if s.Name == m.shedCreatingName {
-					m.shedCreatingName = ""
-					cmds = append(cmds, m.createShedProjectCmd(s))
-					break
+			if msg.Err != nil {
+				// Load failed — abandon creation flow (error already set above)
+				m.shedCreatingName = ""
+				m.mode = ModeNormal
+			} else {
+				found := false
+				for _, s := range m.sheds {
+					if s.Name == m.shedCreatingName {
+						found = true
+						m.shedCreatingName = ""
+						cmds = append(cmds, m.createShedProjectCmd(s))
+						break
+					}
+				}
+				if !found {
+					// Eventual consistency — shed not in list yet, retry
+					cmds = append(cmds, m.loadShedsCmd())
 				}
 			}
 		}

@@ -447,7 +447,7 @@ func (m Model) shedCreateView() string {
 	}
 	backendOptions := []string{"(server default)", "docker", "firecracker"}
 	b.WriteString(backendLabel)
-	b.WriteString(fmt.Sprintf("< %s >", backendOptions[m.shedCreateBackend]))
+	fmt.Fprintf(&b, "< %s >", backendOptions[m.shedCreateBackend])
 	b.WriteString("\n\n")
 
 	// Server display (not focusable)

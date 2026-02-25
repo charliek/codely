@@ -138,10 +138,9 @@ func parseExecError(action string, err error) error {
 	return fmt.Errorf("shed %s failed: %s: %w", action, string(stderr), err)
 }
 
-// CreateShed creates a new shed with the given options
-func (c *DefaultClient) CreateShed(name string, opts CreateOpts) error {
+// buildCreateArgs builds the argument slice for shed create commands.
+func buildCreateArgs(name string, opts CreateOpts) []string {
 	args := []string{"create", name, "--json"}
-
 	if opts.Repo != "" {
 		args = append(args, "--repo", opts.Repo)
 	}
@@ -154,8 +153,12 @@ func (c *DefaultClient) CreateShed(name string, opts CreateOpts) error {
 	if opts.Backend != "" {
 		args = append(args, "--backend", opts.Backend)
 	}
+	return args
+}
 
-	return runJSONAction("create", args...)
+// CreateShed creates a new shed with the given options
+func (c *DefaultClient) CreateShed(name string, opts CreateOpts) error {
+	return runJSONAction("create", buildCreateArgs(name, opts)...)
 }
 
 // StartShed starts a stopped shed
@@ -200,21 +203,7 @@ func (c *DefaultClient) ExecCommand(shedName, command string, args ...string) *e
 // It returns the formatted command line, a channel of stderr lines, and a done
 // channel that delivers the final error (nil on success).
 func (c *DefaultClient) CreateShedStreaming(name string, opts CreateOpts) (string, <-chan string, <-chan error) {
-	args := []string{"create", name, "--json"}
-
-	if opts.Repo != "" {
-		args = append(args, "--repo", opts.Repo)
-	}
-	if opts.Server != "" {
-		args = append(args, "--server", opts.Server)
-	}
-	if opts.Image != "" {
-		args = append(args, "--image", opts.Image)
-	}
-	if opts.Backend != "" {
-		args = append(args, "--backend", opts.Backend)
-	}
-
+	args := buildCreateArgs(name, opts)
 	cmdLine := "shed " + strings.Join(args, " ")
 
 	outputCh := make(chan string, 64)

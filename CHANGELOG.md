@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.0.4
+
+- Add dynamic server selection to shed creation form
+- Add streaming output and Create button to shed creation UX
+- Add backend selection to shed creation form
+- Add robustness fixes for shed creation flow
+- Fix shed terminal creation by passing exec args separately
+- Migrate shed client to structured JSON protocol
+- Upgrade golangci-lint to v2 and manage via mise
+
 ## v0.0.3
 
 - Reduce default manager panel width from 38 to 30

@@ -40,6 +40,12 @@ type ShedsLoadedMsg struct {
 	Err   error
 }
 
+// ServersLoadedMsg is sent when servers are loaded
+type ServersLoadedMsg struct {
+	Servers []shed.Server
+	Err     error
+}
+
 // ShedStartedMsg is sent when a shed is started
 type ShedStartedMsg struct {
 	ShedName string

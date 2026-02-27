@@ -450,19 +450,35 @@ func (m Model) shedCreateView() string {
 	fmt.Fprintf(&b, "< %s >", backendOptions[m.shedCreateBackend])
 	b.WriteString("\n\n")
 
-	// Server display (not focusable)
+	// Server field — dynamic based on loaded servers
+	serverIdx := m.shedCreateServerIdx()
 	serverLabel := "Server: "
-	server := m.config.Shed.DefaultServer
-	if server == "" {
-		server = "(default)"
+	if serverIdx >= 0 && m.shedCreateFocus == serverIdx {
+		serverLabel = styleDialogOptionSelected.Render(serverLabel)
 	}
 	b.WriteString(serverLabel)
-	b.WriteString(server)
+	switch {
+	case len(m.shedCreateServers) > 1:
+		// Focusable cycle selector
+		name := m.shedCreateServers[m.shedCreateServer].Name
+		fmt.Fprintf(&b, "< %s >", name)
+	case len(m.shedCreateServers) == 1:
+		// Single server, display as static text
+		b.WriteString(m.shedCreateServers[0].Name)
+	default:
+		// Still loading or no servers
+		server := m.config.Shed.DefaultServer
+		if server == "" {
+			server = "(default)"
+		}
+		b.WriteString(server)
+	}
 	b.WriteString("\n\n")
 
 	// Submit button
+	submitIdx := m.shedCreateSubmitIdx()
 	createBtn := "[ Create ]"
-	if m.shedCreateFocus == 3 {
+	if m.shedCreateFocus == submitIdx {
 		createBtn = styleDialogOptionSelected.Render(createBtn)
 	}
 	b.WriteString(createBtn)

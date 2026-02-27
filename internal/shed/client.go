@@ -12,6 +12,16 @@ import (
 	"time"
 )
 
+// Server represents a shed server
+type Server struct {
+	Name     string `json:"name"`
+	Host     string `json:"host"`
+	HTTPPort int    `json:"http_port"`
+	SSHPort  int    `json:"ssh_port"`
+	Status   string `json:"status"`
+	Default  bool   `json:"default"`
+}
+
 // Shed represents a remote development container
 type Shed struct {
 	Name      string    `json:"name"`
@@ -37,6 +47,7 @@ type Client interface {
 
 	// Listing
 	ListSheds() ([]Shed, error)
+	ListServers() ([]Server, error)
 
 	// Lifecycle
 	CreateShed(name string, opts CreateOpts) error
@@ -96,6 +107,22 @@ func (c *DefaultClient) ListSheds() ([]Shed, error) {
 	}
 
 	return sheds, nil
+}
+
+// ListServers returns all available servers
+func (c *DefaultClient) ListServers() ([]Server, error) {
+	cmd := exec.Command("shed", "server", "list", "--json")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, parseExecError("server list", err)
+	}
+
+	var servers []Server
+	if err := json.Unmarshal(output, &servers); err != nil {
+		return nil, fmt.Errorf("shed server list: parsing response: %w", err)
+	}
+
+	return servers, nil
 }
 
 // runJSONAction executes a shed CLI command with --json and validates the response.

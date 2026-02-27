@@ -72,7 +72,9 @@ type Model struct {
 	shedCreateName    textinput.Model
 	shedCreateRepo    textinput.Model
 	shedCreateBackend int // 0="(server default)", 1="docker", 2="firecracker"
-	shedCreateFocus   int // 0=name, 1=repo, 2=backend, 3=submit
+	shedCreateFocus   int // 0=name, 1=repo, 2=backend, 3=server(if multi), 3or4=submit
+	shedCreateServer  int // index into shedCreateServers
+	shedCreateServers []shed.Server
 
 	// Shed creating (in-progress) state
 	shedCreatingName  string   // shed name being created (bridges ShedCreatedMsg → ShedsLoadedMsg)

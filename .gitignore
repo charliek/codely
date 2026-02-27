@@ -7,6 +7,9 @@
 # Editor/OS
 .DS_Store
 
+# Claude Code
+.claude/settings.local.json
+
 # Go build/test artifacts
 /bin/
 /dist/

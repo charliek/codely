@@ -128,6 +128,18 @@ func (m *Model) loadShedsCmd() tea.Cmd {
 	}
 }
 
+// loadServersCmd loads available servers
+func (m *Model) loadServersCmd() tea.Cmd {
+	return func() tea.Msg {
+		if m.shed == nil || !m.shed.Available() {
+			return ServersLoadedMsg{Servers: nil, Err: nil}
+		}
+
+		servers, err := m.shed.ListServers()
+		return ServersLoadedMsg{Servers: servers, Err: err}
+	}
+}
+
 // createPaneCmd creates a new tmux pane for a session.
 // Codely always keeps a single visible terminal pane in the main window.
 func (m *Model) createPaneCmd(project *domain.Project, session *domain.Session) tea.Cmd {

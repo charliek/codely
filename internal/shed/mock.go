@@ -4,13 +4,15 @@ import "os/exec"
 
 // MockClient is a mock implementation of Client for testing
 type MockClient struct {
-	AvailableResult bool
-	ListShedsResult []Shed
-	ListShedsErr    error
-	CreateShedErr   error
-	StartShedErr    error
-	StopShedErr     error
-	DeleteShedErr   error
+	AvailableResult   bool
+	ListShedsResult   []Shed
+	ListShedsErr      error
+	ListServersResult []Server
+	ListServersErr    error
+	CreateShedErr     error
+	StartShedErr      error
+	StopShedErr       error
+	DeleteShedErr     error
 
 	// Track calls for verification
 	Calls []MockCall
@@ -42,6 +44,11 @@ func (m *MockClient) Available() bool {
 func (m *MockClient) ListSheds() ([]Shed, error) {
 	m.recordCall("ListSheds")
 	return m.ListShedsResult, m.ListShedsErr
+}
+
+func (m *MockClient) ListServers() ([]Server, error) {
+	m.recordCall("ListServers")
+	return m.ListServersResult, m.ListServersErr
 }
 
 func (m *MockClient) CreateShed(name string, opts CreateOpts) error {

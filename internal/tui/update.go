@@ -93,6 +93,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+	case ServersLoadedMsg:
+		if msg.Err != nil {
+			m.err = msg.Err
+			break
+		}
+		m.shedCreateServers = msg.Servers
+		m.shedCreateServer = 0
+		// Pre-select the default server
+		for i, s := range m.shedCreateServers {
+			if s.Default {
+				m.shedCreateServer = i
+				break
+			}
+		}
+		// Clamp focus: field count may have changed (server selector appearing/disappearing)
+		if fc := m.shedCreateFieldCount(); m.shedCreateFocus >= fc {
+			m.shedCreateFocus = fc - 1
+		}
+
 	case ProjectCreatedMsg:
 		m.handleProjectCreated(msg.Project)
 		// Immediately show command picker
@@ -609,18 +628,22 @@ func (m Model) handleShedPickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // handleShedCreateKey handles keys in shed create mode
 func (m Model) handleShedCreateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	fieldCount := m.shedCreateFieldCount()
+	submitIdx := m.shedCreateSubmitIdx()
+	serverIdx := m.shedCreateServerIdx()
+
 	switch msg.Type {
 	case tea.KeyEsc:
 		m.mode = ModeNormal
 		return m, nil
 
 	case tea.KeyTab, tea.KeyDown:
-		m.shedCreateFocus = (m.shedCreateFocus + 1) % 4
+		m.shedCreateFocus = (m.shedCreateFocus + 1) % fieldCount
 		m.updateShedCreateFocus()
 		return m, nil
 
 	case tea.KeyShiftTab, tea.KeyUp:
-		m.shedCreateFocus = (m.shedCreateFocus + 3) % 4
+		m.shedCreateFocus = (m.shedCreateFocus + fieldCount - 1) % fieldCount
 		m.updateShedCreateFocus()
 		return m, nil
 
@@ -629,23 +652,35 @@ func (m Model) handleShedCreateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.shedCreateBackend = (m.shedCreateBackend + 2) % 3
 			return m, nil
 		}
+		if serverIdx >= 0 && m.shedCreateFocus == serverIdx {
+			n := len(m.shedCreateServers)
+			m.shedCreateServer = (m.shedCreateServer + n - 1) % n
+			return m, nil
+		}
 
 	case tea.KeyRight:
 		if m.shedCreateFocus == 2 {
 			m.shedCreateBackend = (m.shedCreateBackend + 1) % 3
 			return m, nil
 		}
+		if serverIdx >= 0 && m.shedCreateFocus == serverIdx {
+			m.shedCreateServer = (m.shedCreateServer + 1) % len(m.shedCreateServers)
+			return m, nil
+		}
 
 	case tea.KeyEnter:
-		if m.shedCreateFocus == 3 {
+		if m.shedCreateFocus == submitIdx {
 			// Submit
 			name := m.shedCreateName.Value()
 			if name == "" {
 				return m, nil
 			}
 
-			// Get server (would need server list - for now use default)
+			// Resolve server from selection or fall back to config default
 			server := m.config.Shed.DefaultServer
+			if len(m.shedCreateServers) > 0 && m.shedCreateServer < len(m.shedCreateServers) {
+				server = m.shedCreateServers[m.shedCreateServer].Name
+			}
 
 			// Convert backend index to string
 			var backend string
@@ -668,7 +703,7 @@ func (m Model) handleShedCreateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			})
 		}
 		// Move to next field
-		m.shedCreateFocus = (m.shedCreateFocus + 1) % 4
+		m.shedCreateFocus = (m.shedCreateFocus + 1) % fieldCount
 		m.updateShedCreateFocus()
 		return m, nil
 	}
@@ -805,9 +840,12 @@ func (m Model) handleNewProjectTypeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.mode = ModeShedCreate
 			m.shedCreateFocus = 0
 			m.shedCreateBackend = 0
+			m.shedCreateServer = 0
+			m.shedCreateServers = nil
 			m.shedCreateName.SetValue("")
 			m.shedCreateRepo.SetValue("")
 			m.updateShedCreateFocus()
+			return m, m.loadServersCmd()
 		}
 		return m, nil
 	}
@@ -1040,6 +1078,30 @@ func (m *Model) updateShedCreateFocus() {
 	case 1:
 		m.shedCreateRepo.Focus()
 	}
+}
+
+// shedCreateFieldCount returns the number of focusable fields in the shed create form.
+// When there are 2+ servers, the server selector is focusable (5 fields).
+// Otherwise, server is static and there are 4 fields.
+func (m *Model) shedCreateFieldCount() int {
+	if len(m.shedCreateServers) > 1 {
+		return 5
+	}
+	return 4
+}
+
+// shedCreateSubmitIdx returns the focus index for the submit button.
+func (m *Model) shedCreateSubmitIdx() int {
+	return m.shedCreateFieldCount() - 1
+}
+
+// shedCreateServerIdx returns the focus index for the server selector,
+// or -1 if the server field is not focusable.
+func (m *Model) shedCreateServerIdx() int {
+	if len(m.shedCreateServers) > 1 {
+		return 3
+	}
+	return -1
 }
 
 func containsIgnoreCase(s, substr string) bool {

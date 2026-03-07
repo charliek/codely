@@ -17,7 +17,7 @@ codely --skin flat   # flat card list
 
 The tree skin shows projects in a hierarchical view with expand/collapse navigation. Sessions are nested under their parent project.
 
-```
+```text
 ┌──────────────────────┐
 │ LOCAL                │
 │ ▼ my-project         │
@@ -33,7 +33,7 @@ The tree skin shows projects in a hierarchical view with expand/collapse navigat
 
 The flat skin shows projects as a scrollable list of cards. Each card displays the project name, path, session count, and per-session status.
 
-```
+```text
 ┌──────────────────────────┐
 │ ╭────────────────────────╮│
 │ │ my-project             ││
@@ -54,7 +54,7 @@ Navigation in the flat skin uses up/down only (no expand/collapse). Left, right,
 
 ## Layout
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────┐
 │                            tmux session                              │
 │                                                                      │
@@ -148,7 +148,7 @@ These keys are handled by the active skin:
 
 Codely updates the tmux status bar with a segment showing sessions that need attention:
 
-```
+```text
 Codely: [1] api/claude [2] web/opencode ! db/codex
 ```
 

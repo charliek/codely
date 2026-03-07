@@ -16,7 +16,7 @@ Codely is a terminal-based project manager for orchestrating AI coding sessions 
 
 ### System Context
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                              tmux session                               │
 │                                                                         │
@@ -72,7 +72,7 @@ All skins share the same tmux pane management, project/session CRUD, and action 
 
 ### Main View: Project Tree (tree skin)
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │ Codely                            v0.1│
 ├─────────────────────────────────────────┤
@@ -114,7 +114,7 @@ Tip: Use tmux zoom (`prefix` + `z`) to toggle fullscreen for the active pane.
 
 ### Main View: Flat Cards (flat skin)
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │ Codely                            v0.1│
 ├─────────────────────────────────────────┤
@@ -160,7 +160,7 @@ The flat skin selects at the project level. Navigate with up/down keys. Left/rig
 
 ### Selection States
 
-```
+```text
 # Project selected (expanded)
 ▼ codelens                    ← SELECTED
   ~/projects/codelens
@@ -189,7 +189,7 @@ The flat skin selects at the project level. Navigate with up/down keys. Left/rig
 
 ### View: New Project (Local)
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │ New Local Project                       │
 ├─────────────────────────────────────────┤
@@ -214,7 +214,7 @@ The flat skin selects at the project level. Navigate with up/down keys. Left/rig
 
 When pressing `t` on a project, or after creating a new project:
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │ Add Terminal                            │
 ├─────────────────────────────────────────┤
@@ -245,7 +245,7 @@ When pressing `t` on a project, or after creating a new project:
 
 ### View: Attach to Existing Shed
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │ Attach to Shed                          │
 ├─────────────────────────────────────────┤
@@ -267,7 +267,7 @@ When pressing `t` on a project, or after creating a new project:
 
 ### View: Create New Shed
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │ Create New Shed                         │
 ├─────────────────────────────────────────┤
@@ -292,7 +292,7 @@ When pressing `t` on a project, or after creating a new project:
 
 ### View: Close Shed Project
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │ Close Shed Project                      │
 ├─────────────────────────────────────────┤
@@ -325,7 +325,7 @@ When pressing `t` on a project, or after creating a new project:
 
 The data model is hierarchical:
 
-```
+```text
 Project (workspace)
 ├── Session (terminal 1)
 ├── Session (terminal 2)
@@ -431,7 +431,7 @@ type Shed struct {
 
 ### Relationships
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                         Project                             │
 │  id: "proj-123"                                            │
@@ -455,7 +455,7 @@ type Shed struct {
 
 ### Config File Location
 
-```
+```text
 ~/.config/codely/config.yaml
 ```
 
@@ -522,7 +522,7 @@ shed:
 ### Session State (Runtime)
 
 Active projects and sessions are stored in:
-```
+```text
 ~/.local/state/codely/session.json
 ```
 
@@ -598,7 +598,7 @@ Note: The `"frontend"` project above has zero sessions but still persists, allow
 
 ### Workflow 1: Launch Codely
 
-```
+```text
 User runs: codely
 
 1. Check if inside tmux session
@@ -633,7 +633,7 @@ User runs: codely
 
 ### Workflow 2: Create Local Project
 
-```
+```text
 User presses: n (new project)
 
 1. Show workspace type picker
@@ -666,7 +666,7 @@ User presses: n (new project)
 
 ### Workflow 3: Attach to Existing Shed
 
-```
+```text
 User presses: n (new project) → selects "Attach to Shed"
 
 1. Fetch shed list
@@ -703,7 +703,7 @@ User presses: n (new project) → selects "Attach to Shed"
 
 ### Workflow 4: Create New Shed
 
-```
+```text
 User presses: n (new project) → selects "Create New Shed"
 
 1. Show shed creation form
@@ -729,7 +729,7 @@ User presses: n (new project) → selects "Create New Shed"
 
 ### Workflow 5: Add Terminal to Project
 
-```
+```text
 User presses: t (terminal) with a project selected
 -- OR --
 After creating a new project (Workflows 2-4)
@@ -775,7 +775,7 @@ After creating a new project (Workflows 2-4)
 
 ### Workflow 6: Navigate and Focus
 
-```
+```text
 User navigates with j/k or arrows
 
 Tree structure allows two types of selection:
@@ -793,7 +793,7 @@ Navigation rules:
 
 ### Workflow 7: Focus Session Pane
 
-```
+```text
 User presses: Enter on a session row
 
 1. Get session's pane ID
@@ -809,7 +809,7 @@ User presses: Enter on a session row
 
 ### Workflow 8: Close Session
 
-```
+```text
 User presses: x with a session selected
 
 1. Confirm: "Close <command> in <project>? [y/n]"
@@ -826,7 +826,7 @@ User presses: x with a session selected
 
 ### Workflow 9: Close Project
 
-```
+```text
 User presses: X (shift-x) with a project selected
 -- OR --
 User presses: x with a project selected (not a session)
@@ -877,7 +877,7 @@ User presses: x with a project selected (not a session)
 
 ### Workflow 10: Collapse/Expand Project
 
-```
+```text
 User presses: Enter or Space on a project row
 -- OR --
 User presses: Left/Right arrow
@@ -1182,7 +1182,7 @@ tmux split-window -h "shed exec codelens claude --dangerously-skip-permissions"
 
 ## Project Structure
 
-```
+```text
 codely/
 ├── cmd/
 │   └── codely/
@@ -1277,7 +1277,7 @@ require (
 
 Errors are shown in a dismissible banner at the bottom of the screen:
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │ Codely                                │
 ├─────────────────────────────────────────┤
@@ -1425,7 +1425,7 @@ shed:
 
 ## Appendix C: Command Line Interface
 
-```
+```text
 codely - AI Coding Session Manager
 
 USAGE:

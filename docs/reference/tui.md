@@ -2,6 +2,56 @@
 
 Codely runs as a Bubble Tea terminal application inside tmux. The TUI occupies a narrow left pane and manages the remaining space for your coding sessions.
 
+## Skins
+
+Codely supports multiple UI skins that change how the manager panel renders projects and sessions. The tmux pane layout and all project/session management actions remain the same regardless of skin.
+
+Select a skin with the `--skin` CLI flag or the `ui.skin` config option:
+
+```bash
+codely --skin tree   # hierarchical tree (default)
+codely --skin flat   # flat card list
+```
+
+### Tree Skin (default)
+
+The tree skin shows projects in a hierarchical view with expand/collapse navigation. Sessions are nested under their parent project.
+
+```
+┌──────────────────────┐
+│ LOCAL                │
+│ ▼ my-project         │
+│   ~/projects/my-proj │
+│   ● claude   🤔      │
+│   ○ bash     💤      │
+│                      │
+│ ▶ other-proj (1)     │
+└──────────────────────┘
+```
+
+### Flat Skin
+
+The flat skin shows projects as a scrollable list of cards. Each card displays the project name, path, session count, and per-session status.
+
+```
+┌──────────────────────────┐
+│ ╭────────────────────────╮│
+│ │ my-project             ││
+│ │ ~/projects/my-proj     ││
+│ │ 2 sessions  ● 1 active ││
+│ │ Claude Code 🤔  Bash 💤││
+│ ╰────────────────────────╯│
+│ ╭────────────────────────╮│
+│ │ other-proj             ││
+│ │ ~/work/other-proj      ││
+│ │ 1 session              ││
+│ │ Claude Code 💤         ││
+│ ╰────────────────────────╯│
+└──────────────────────────┘
+```
+
+Navigation in the flat skin uses up/down only (no expand/collapse). Left, right, and space are no-ops. Enter on a project toggles its expanded state; all other actions (new project, terminal, close) work the same.
+
 ## Layout
 
 ```
@@ -11,13 +61,10 @@ Codely runs as a Bubble Tea terminal application inside tmux. The TUI occupies a
 │  ┌─────────────────────┐  ┌────────────────────────────────────────┐ │
 │  │ Codely TUI          │  │ Active Pane                            │ │
 │  │                      │  │ (claude / opencode / bash / etc.)      │ │
-│  │ LOCAL                │  │                                        │ │
-│  │ ▼ my-project         │  │                                        │ │
-│  │   ~/projects/my-proj │  │                                        │ │
-│  │   ● claude   🤔      │  │                                        │ │
-│  │   ○ bash     💤      │  │                                        │ │
+│  │  (skin renders here) │  │                                        │ │
 │  │                      │  │                                        │ │
-│  │ ▶ other-proj (1)     │  │                                        │ │
+│  │                      │  │                                        │ │
+│  │                      │  │                                        │ │
 │  │                      │  │                                        │ │
 │  ├──────────────────────┤  │                                        │ │
 │  │ [n]ew [t]erm [x]close│  │                                        │ │
@@ -47,16 +94,23 @@ Use tmux zoom (`prefix` + `z`) to toggle fullscreen on the active pane.
 | `?` | Toggle help overlay |
 | `r` | Refresh status and shed list |
 
-### Project Tree
+### Navigation (skin-specific)
+
+These keys are handled by the active skin:
+
+| Key | Tree Skin | Flat Skin |
+|-----|-----------|-----------|
+| `j` / `↓` | Move selection down | Move selection down |
+| `k` / `↑` | Move selection up | Move selection up |
+| `h` / `←` | Collapse project or move to parent | No-op |
+| `l` / `→` | Expand project or move to first child | No-op |
+| `Space` | Toggle project expand/collapse | No-op |
+
+### Project Actions (all skins)
 
 | Key | Action |
 |-----|--------|
-| `j` / `↓` | Move selection down |
-| `k` / `↑` | Move selection up |
-| `h` / `←` | Collapse project or move to parent |
-| `l` / `→` | Expand project or move to first child |
 | `Enter` | Focus session pane (session) / toggle expand (project) |
-| `Space` | Toggle project expand/collapse |
 | `n` | New project |
 | `t` | Add terminal to selected project |
 | `x` | Close selected session |

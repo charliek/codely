@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Add UI skin system with `--skin` CLI flag and `ui.skin` config option
+- Add flat card skin as an alternative to the default tree view
+
 ## v0.0.4
 
 - Add dynamic server selection to shed creation form

@@ -48,6 +48,7 @@ ui:
   status_poll_interval: 1s
   show_directory: true
   auto_expand_projects: true
+  skin: tree
 
 shed:
   enabled: true
@@ -84,6 +85,7 @@ When `status_detection` is `auto` (default), codely selects a detector based on 
 | `status_poll_interval` | duration | `1s` | How often to check pane status |
 | `show_directory` | bool | `false` | Show full path in project list |
 | `auto_expand_projects` | bool | `false` | Expand projects by default in the tree |
+| `skin` | string | `tree` | UI skin for the manager panel: `tree` or `flat` |
 
 ## Shed Fields
 

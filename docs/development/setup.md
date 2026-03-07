@@ -64,6 +64,9 @@ codely/
 │   ├── store/             # Session/project persistence
 │   ├── tmux/              # tmux client
 │   └── tui/               # Bubble Tea TUI
+│       ├── skin.go        # Skin interface and factory
+│       ├── skin_tree.go   # Tree skin (hierarchical view)
+│       ├── skin_flat.go   # Flat skin (card list view)
 │       └── components/    # Tree, pickers, dialogs
 ├── docs/                  # Documentation (this site)
 ├── testdata/              # Test fixtures

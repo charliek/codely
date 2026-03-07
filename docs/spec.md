@@ -59,7 +59,18 @@ Codely is a terminal-based project manager for orchestrating AI coding sessions 
 
 ## User Interface
 
-### Main View: Project Tree
+### Skins
+
+Codely supports pluggable UI skins that control how the manager panel renders projects and sessions. The skin is selected via the `--skin` CLI flag or the `ui.skin` config option.
+
+| Skin | Description |
+|------|-------------|
+| `tree` | Hierarchical tree with expand/collapse (default) |
+| `flat` | Scrollable flat list of project cards |
+
+All skins share the same tmux pane management, project/session CRUD, and action keybindings. Only the left panel rendering and navigation keys differ.
+
+### Main View: Project Tree (tree skin)
 
 ```
 ┌─────────────────────────────────────────┐
@@ -101,7 +112,40 @@ Codely is a terminal-based project manager for orchestrating AI coding sessions 
 
 Tip: Use tmux zoom (`prefix` + `z`) to toggle fullscreen for the active pane.
 
-**Notes:**
+### Main View: Flat Cards (flat skin)
+
+```
+┌─────────────────────────────────────────┐
+│ Codely                            v0.1│
+├─────────────────────────────────────────┤
+│                                         │
+│  ╭─────────────────────────────────────╮│
+│  │ codelens                            ││
+│  │ ~/projects/codelens                 ││
+│  │ 2 sessions  ● 1 active             ││
+│  │ claude 🤔  opencode 💤             ││
+│  ╰─────────────────────────────────────╯│
+│                                         │
+│  ╭─────────────────────────────────────╮│
+│  │ api-server                          ││
+│  │ ~/work/smartthings/api              ││
+│  │ 1 session                           ││
+│  │ claude ⚡                            ││
+│  ╰─────────────────────────────────────╯│
+│                                         │
+│  ╭─────────────────────────────────────╮│
+│  │ frontend                            ││
+│  │ ~/work/smartthings/web              ││
+│  ╰─────────────────────────────────────╯│
+│                                         │
+├─────────────────────────────────────────┤
+│ [n]ew project [t]erminal [x]close [q]uit│
+└─────────────────────────────────────────┘
+```
+
+The flat skin selects at the project level. Navigate with up/down keys. Left/right/space are no-ops.
+
+**Notes (tree skin):**
 - Projects with zero sessions show "(no terminals)" 
 - Stopped sheds show ⏸️ status at project level
 - Collapsed projects show session count
@@ -467,6 +511,7 @@ ui:
   status_poll_interval: 1s   # How often to check pane status
   show_directory: true       # Show full path in project list
   auto_expand_projects: true # Expand projects by default
+  skin: tree                 # UI skin: tree or flat
 
 # Shed integration
 shed:
@@ -1075,16 +1120,21 @@ tmux split-window -h "shed exec codelens claude --dangerously-skip-permissions"
 | `?` | Show help |
 | `r` | Refresh status / shed list |
 
-### Project Tree View
+### Navigation (skin-specific)
+
+| Key | Tree Skin | Flat Skin |
+|-----|-----------|-----------|
+| `j` / `↓` | Move selection down | Move selection down |
+| `k` / `↑` | Move selection up | Move selection up |
+| `←` | Collapse project / Move to parent | No-op |
+| `→` | Expand project / Move to first child | No-op |
+| `Space` | Toggle expand/collapse | No-op |
+
+### Project Actions (all skins)
 
 | Key | Action |
 |-----|--------|
-| `j` / `↓` | Move selection down |
-| `k` / `↑` | Move selection up |
 | `Enter` | Focus session pane (if session selected) / Toggle expand (if project selected) |
-| `Space` | Toggle expand/collapse (if project selected) |
-| `←` | Collapse project / Move to parent |
-| `→` | Expand project / Move to first child |
 | `n` | New project (local, attach shed, or create shed) |
 | `t` | Add terminal to selected project |
 | `x` | Close selected session |
@@ -1160,7 +1210,10 @@ codely/
 │   └── ui/
 │       ├── model.go                # Main Bubble Tea model
 │       ├── update.go               # Update logic
-│       ├── view.go                 # View rendering
+│       ├── view.go                 # View rendering (delegates to skin)
+│       ├── skin.go                 # Skin interface and factory
+│       ├── skin_tree.go            # Tree skin (hierarchical view)
+│       ├── skin_flat.go            # Flat skin (card list view)
 │       ├── components/
 │       │   ├── tree.go             # Project/session tree component
 │       │   ├── folder_picker.go    # Folder selection
@@ -1253,6 +1306,7 @@ Errors are shown in a dismissible banner at the bottom of the screen:
 
 - Command plugins (add new AI tools via config)
 - Custom status detectors per command
+- UI skins (implement the `Skin` interface in `internal/tui/`)
 - Theming support
 
 ---
@@ -1343,6 +1397,7 @@ ui:
   status_poll_interval: 1s
   show_directory: true
   auto_expand_projects: true
+  skin: tree
 
 shed:
   enabled: true
@@ -1378,6 +1433,7 @@ USAGE:
 
 OPTIONS:
     -c, --config <PATH>    Config file path (default: ~/.config/codely/config.yaml)
+    --skin <NAME>          UI skin: tree or flat (default from config or "tree")
     -v, --verbose          Enable debug logging
     -h, --help             Show this help message
     --version              Show version
@@ -1385,4 +1441,5 @@ OPTIONS:
 EXAMPLES:
     codely               Start Codely
     codely -c ~/my.yaml  Start with custom config
+    codely --skin flat   Start with the flat card skin
 ```

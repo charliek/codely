@@ -28,6 +28,9 @@ codely
 # Use a custom config file
 codely -c ~/my-config.yaml
 
+# Use the flat card skin
+codely --skin flat
+
 # Show version
 codely --version
 

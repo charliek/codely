@@ -5,6 +5,7 @@ A terminal-based project manager for orchestrating AI coding sessions across loc
 Codely runs inside tmux and provides a unified interface for launching, monitoring, and switching between multiple concurrent coding sessions.
 
 - **Session management** — run Claude Code, OpenCode, Codex, lazygit, or shell sessions side by side
+- **UI skins** — choose between a hierarchical tree view or a flat card list (`--skin tree` or `--skin flat`)
 - **Project tree** — organize sessions under projects with expand/collapse navigation
 - **Status monitoring** — real-time detection of idle, thinking, executing, and error states
 - **tmux integration** — splits panes automatically, tracks pane lifecycle, reconnects on restart

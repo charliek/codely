@@ -2,13 +2,13 @@ package tui
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/charliek/codely/internal/domain"
+	"github.com/charliek/codely/internal/pathutil"
 )
 
 // View renders the current state
@@ -122,12 +122,7 @@ func (m Model) folderPickerView() string {
 
 	idx := 0
 	for _, parent := range groupOrder {
-		// Shorten home directory
-		displayParent := parent
-		home := homeDir()
-		if strings.HasPrefix(displayParent, home) {
-			displayParent = "~" + displayParent[len(home):]
-		}
+		displayParent := pathutil.ContractHome(parent)
 
 		b.WriteString(styleProjectPath.Render(displayParent + "/"))
 		b.WriteString("\n")
@@ -427,10 +422,7 @@ func (m Model) confirmView() string {
 		sessionName := "unknown"
 		projName := "unknown"
 		if m.confirmSession != nil {
-			sessionName = m.confirmSession.Command.DisplayName
-			if sessionName == "" {
-				sessionName = m.confirmSession.Command.ID
-			}
+			sessionName = m.confirmSession.Command.Name()
 		}
 		if m.confirmProject != nil {
 			projName = m.confirmProject.Name
@@ -510,8 +502,3 @@ func (m Model) versionString() string {
 	return "  v0.1"
 }
 
-// homeDir returns the user's home directory
-func homeDir() string {
-	home, _ := os.UserHomeDir()
-	return home
-}

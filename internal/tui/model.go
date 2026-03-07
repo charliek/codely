@@ -45,10 +45,9 @@ type Model struct {
 	shed   shed.Client
 
 	// UI state
-	mode     Mode
-	skin     Skin
-	skinName SkinName
-	keys     KeyMap
+	mode Mode
+	skin Skin
+	keys KeyMap
 	help     help.Model
 	width    int
 	height   int
@@ -110,16 +109,15 @@ type Model struct {
 func NewModel(cfg *config.Config, store *store.Store, tmuxClient tmux.Client, shedClient shed.Client, codelyPaneID int, codelyWindowID string, skinName SkinName) *Model {
 	keys := DefaultKeyMap()
 
-	// Build skin from stored projects
-	skin := NewSkin(skinName, store.Projects(), cfg, keys)
-
-	// Expand all projects by default if configured
+	// Expand all projects by default if configured (before building skin)
 	if cfg.UI.AutoExpandProjects {
 		for _, p := range store.Projects() {
 			p.Expanded = true
 		}
-		skin.Flatten()
 	}
+
+	// Build skin from stored projects
+	skin := NewSkin(skinName, store.Projects(), cfg, keys)
 
 	// Set up folder search input
 	folderSearch := textinput.New()
@@ -150,9 +148,8 @@ func NewModel(cfg *config.Config, store *store.Store, tmuxClient tmux.Client, sh
 		tmux:           tmuxClient,
 		shed:           shedClient,
 		mode:           ModeNormal,
-		skin:           skin,
-		skinName:       skinName,
-		keys:           keys,
+		skin: skin,
+		keys: keys,
 		help:           help.New(),
 		commands:       commands,
 		commandKeys:    commandKeys,

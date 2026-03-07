@@ -365,14 +365,8 @@ func (m Model) handleEnter() (tea.Model, tea.Cmd) {
 		return m, m.showPaneCmd(proj, sess)
 	}
 
-	// Toggle project expand/collapse (skin-specific behavior)
-	if ts, ok := m.skin.(*TreeSkin); ok {
-		ts.Toggle()
-	} else {
-		// For non-tree skins, toggle expand on the project
-		proj.Expanded = !proj.Expanded
-		m.skin.Flatten()
-	}
+	// Toggle project expand/collapse
+	m.skin.ToggleProject()
 	return m, nil
 }
 
@@ -564,11 +558,10 @@ func (m Model) handleCommandPickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Add to store
 		_ = m.store.AddSession(proj.ID, session)
 		_ = m.store.Save()
-		m.skin.SetProjects(m.store.Projects())
 
-		// Select the new session
+		// Expand the project before rebuilding so new session is visible
 		proj.Expanded = true
-		m.skin.Flatten()
+		m.skin.SetProjects(m.store.Projects())
 		m.skin.SelectBySessionID(proj.ID, session.ID)
 
 		m.pendingProject = nil

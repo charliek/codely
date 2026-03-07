@@ -10,6 +10,7 @@ import (
 
 	"github.com/charliek/codely/internal/config"
 	"github.com/charliek/codely/internal/domain"
+	"github.com/charliek/codely/internal/pathutil"
 )
 
 // FlatSkin renders projects as a scrollable list of cards.
@@ -51,6 +52,9 @@ var (
 
 	styleCardMeta = lipgloss.NewStyle().
 			Foreground(colorMuted)
+
+	styleCardActive = lipgloss.NewStyle().
+			Foreground(colorSuccess)
 )
 
 func (s *FlatSkin) View(m *Model) string {
@@ -80,13 +84,8 @@ func (s *FlatSkin) renderCard(m *Model, proj *domain.Project) string {
 	b.WriteString(styleCardTitle.Render(proj.Name))
 
 	// Path
-	path := proj.DisplayPath()
-	home := homeDir()
-	if strings.HasPrefix(path, home) {
-		path = "~" + path[len(home):]
-	}
 	b.WriteString("\n")
-	b.WriteString(styleCardPath.Render(path))
+	b.WriteString(styleCardPath.Render(pathutil.ContractHome(proj.DisplayPath())))
 
 	// Session summary
 	total := len(proj.Sessions)
@@ -102,7 +101,7 @@ func (s *FlatSkin) renderCard(m *Model, proj *domain.Project) string {
 		b.WriteString(styleCardMeta.Render(fmt.Sprintf("%d sessions", total)))
 		if active > 0 {
 			b.WriteString(styleCardMeta.Render("  "))
-			b.WriteString(lipgloss.NewStyle().Foreground(colorSuccess).Render(fmt.Sprintf("● %d active", active)))
+			b.WriteString(styleCardActive.Render(fmt.Sprintf("● %d active", active)))
 		}
 	}
 
@@ -111,10 +110,7 @@ func (s *FlatSkin) renderCard(m *Model, proj *domain.Project) string {
 		b.WriteString("\n")
 		var parts []string
 		for _, sess := range proj.Sessions {
-			name := sess.Command.DisplayName
-			if name == "" {
-				name = sess.Command.ID
-			}
+			name := sess.Command.Name()
 			icon := sess.Status.Icon()
 			styled := styleStatus(sess.Status).Render(icon)
 			parts = append(parts, fmt.Sprintf("%s %s", name, styled))
@@ -184,6 +180,6 @@ func (s *FlatSkin) SelectBySessionID(projectID, sessionID string) {
 	s.SelectByProjectID(projectID)
 }
 
-func (s *FlatSkin) Flatten() {
-	// No-op for flat skin — no expand/collapse semantics
+func (s *FlatSkin) ToggleProject() {
+	// No expand/collapse in flat skin
 }

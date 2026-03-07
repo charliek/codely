@@ -9,6 +9,7 @@ import (
 
 	"github.com/charliek/codely/internal/config"
 	"github.com/charliek/codely/internal/domain"
+	"github.com/charliek/codely/internal/pathutil"
 	"github.com/charliek/codely/internal/tui/components"
 )
 
@@ -53,7 +54,8 @@ func (s *TreeSkin) View(m *Model) string {
 
 	// Render items
 	selectedIdx := s.tree.SelectedIndex()
-	for i, item := range s.tree.Items() {
+	items := s.tree.Items()
+	for i, item := range items {
 		isSelected := i == selectedIdx
 		line := s.renderItem(m, item, isSelected)
 		b.WriteString(line)
@@ -63,8 +65,8 @@ func (s *TreeSkin) View(m *Model) string {
 		if item.Type == components.ItemTypeProject &&
 			item.Project.Type == domain.ProjectTypeLocal &&
 			len(shedProjects) > 0 {
-			if i+1 < len(s.tree.Items()) {
-				next := s.tree.Items()[i+1]
+			if i+1 < len(items) {
+				next := items[i+1]
 				if next.Type == components.ItemTypeProject && next.Project.Type == domain.ProjectTypeShed {
 					b.WriteString("\n")
 					b.WriteString(styleSectionHeader.Render("SHEDS"))
@@ -126,11 +128,7 @@ func (s *TreeSkin) renderProject(m *Model, proj *domain.Project) string {
 	line := fmt.Sprintf("%s %s%s%s", indicator, name, countStr, stoppedStr)
 
 	if proj.Expanded && s.config.UI.ShowDirectory {
-		path := proj.DisplayPath()
-		home := homeDir()
-		if strings.HasPrefix(path, home) {
-			path = "~" + path[len(home):]
-		}
+		path := pathutil.ContractHome(proj.DisplayPath())
 		line = fmt.Sprintf("%s\n    %s", line, styleProjectPath.Render(path))
 	}
 
@@ -149,15 +147,17 @@ func (s *TreeSkin) renderSession(m *Model, sess *domain.Session) string {
 	}
 	statusStyled := styleStatus(sess.Status).Render(statusStr)
 
-	name := sess.Command.DisplayName
-	if name == "" {
-		name = sess.Command.ID
+	name := sess.Command.Name()
+
+	padding := 14 - len(name)
+	if padding < 1 {
+		padding = 1
 	}
 
 	return fmt.Sprintf("    %s %s%s%s",
 		focusIndicator,
 		styleSessionName.Render(name),
-		strings.Repeat(" ", 14-len(name)),
+		strings.Repeat(" ", padding),
 		statusStyled)
 }
 
@@ -215,11 +215,6 @@ func (s *TreeSkin) SelectBySessionID(projectID, sessionID string) {
 	s.tree.SelectBySessionID(projectID, sessionID)
 }
 
-func (s *TreeSkin) Flatten() {
-	s.tree.Flatten()
-}
-
-// Toggle exposes the tree's Toggle for handleEnter.
-func (s *TreeSkin) Toggle() {
+func (s *TreeSkin) ToggleProject() {
 	s.tree.Toggle()
 }

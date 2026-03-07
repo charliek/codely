@@ -30,11 +30,13 @@ type Skin interface {
 	SelectedSession() *domain.Session
 	IsSessionSelected() bool
 
+	// Actions
+	ToggleProject()
+
 	// Data sync
 	SetProjects(projects []*domain.Project)
 	SelectByProjectID(id string)
 	SelectBySessionID(projectID, sessionID string)
-	Flatten()
 }
 
 // NewSkin creates a skin by name

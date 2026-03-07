@@ -52,6 +52,27 @@ The flat skin shows projects as a scrollable list of cards. Each card displays t
 
 Navigation in the flat skin uses up/down only (no expand/collapse). Left, right, and space are no-ops. Enter on a project toggles its expanded state; all other actions (new project, terminal, close) work the same.
 
+### Selection States
+
+The tree skin supports three selection states:
+
+```text
+# Project selected (expanded)
+▼ codelens                    <-- SELECTED
+  ~/projects/codelens
+  ○ claude              💤
+  ○ opencode            💤
+
+# Session selected
+▼ codelens
+  ~/projects/codelens
+  ● claude              🤔    <-- SELECTED
+  ○ opencode            💤
+
+# Project selected (collapsed)
+▶ codelens (2 sessions)       <-- SELECTED
+```
+
 ## Layout
 
 ```text
@@ -73,6 +94,121 @@ Navigation in the flat skin uses up/down only (no expand/collapse). Left, right,
 ```
 
 Use tmux zoom (`prefix` + `z`) to toggle fullscreen on the active pane.
+
+### Views
+
+#### New Project
+
+```text
+┌─────────────────────────────────────────┐
+│ New Local Project                       │
+├─────────────────────────────────────────┤
+│                                         │
+│  Select directory:                      │
+│                                         │
+│  ~/work/smartthings/                    │
+│    ○ api/                               │
+│    ○ web/                               │
+│    ○ mobile/                            │
+│                                         │
+│  ~/projects/stridelabs/                 │
+│    ○ audio/                             │
+│    ○ codely/                            │
+│                                         │
+│  [/] search  [enter] select  [esc] back │
+└─────────────────────────────────────────┘
+```
+
+#### Add Terminal
+
+```text
+┌─────────────────────────────────────────┐
+│ Add Terminal                            │
+├─────────────────────────────────────────┤
+│                                         │
+│  Project: codelens                      │
+│  Path: ~/projects/codelens              │
+│                                         │
+│  Select command:                        │
+│                                         │
+│  ● claude                               │
+│    claude --dangerously-skip-permissions │
+│                                         │
+│  ○ opencode                             │
+│    opencode                             │
+│                                         │
+│  ○ bash                                 │
+│    bash                                 │
+│                                         │
+│  [enter] launch  [esc] back             │
+└─────────────────────────────────────────┘
+```
+
+#### Attach to Shed
+
+```text
+┌─────────────────────────────────────────┐
+│ Attach to Shed                          │
+├─────────────────────────────────────────┤
+│                                         │
+│  Available Sheds:                       │
+│                                         │
+│  mini-desktop                           │
+│  ● codelens        running    2h ago    │
+│  ○ mcp-test        stopped    3d ago    │
+│  ○ scratch         running    1h ago    │
+│                                         │
+│  cloud-vps                              │
+│  ○ stbot           running    30m ago   │
+│                                         │
+│  [enter] select  [s] start  [esc] back  │
+└─────────────────────────────────────────┘
+```
+
+#### Create New Shed
+
+```text
+┌─────────────────────────────────────────┐
+│ Create New Shed                         │
+├─────────────────────────────────────────┤
+│                                         │
+│  Shed name: my-new-project_             │
+│                                         │
+│  Repository (optional):                 │
+│  ○ None (scratch shed)                  │
+│  ● From GitHub: charliek/_              │
+│                                         │
+│  Server:                                │
+│  ● mini-desktop (default)               │
+│  ○ cloud-vps                            │
+│                                         │
+│  [enter] create  [esc] back             │
+└─────────────────────────────────────────┘
+```
+
+#### Close Shed Project
+
+```text
+┌─────────────────────────────────────────┐
+│ Close Shed Project                      │
+├─────────────────────────────────────────┤
+│                                         │
+│  Project: test-shed (mini-desktop)      │
+│                                         │
+│  What would you like to do?             │
+│                                         │
+│  ● Close project only                   │
+│    Shed keeps running on server.        │
+│                                         │
+│  ○ Close and stop shed                  │
+│    Can be restarted later.              │
+│                                         │
+│  ○ Close and DELETE shed                │
+│    Permanently removes container.       │
+│                                         │
+│  [enter] confirm  [esc] cancel          │
+└─────────────────────────────────────────┘
+```
 
 ## Status Icons
 
@@ -110,7 +246,7 @@ These keys are handled by the active skin:
 
 | Key | Action |
 |-----|--------|
-| `Enter` | Focus session pane (session) / toggle expand (project) |
+| `Enter` | Focus session pane (session) / toggle expand (project, tree skin only) |
 | `n` | New project |
 | `t` | Add terminal to selected project |
 | `x` | Close selected session |

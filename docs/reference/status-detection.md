@@ -50,11 +50,69 @@ commands:
     status_detection: claude
 ```
 
+## Detection Patterns
+
+The status detector checks the last several lines of terminal output. Each tool-specific detector applies its own patterns, but the generic detector uses the following heuristics:
+
+**Spinner characters (thinking):**
+
+```go
+var spinnerChars = []rune{'⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'}
+```
+
+**Thinking text patterns:**
+
+```go
+var thinkingPatterns = []string{
+    "thinking",
+    "analyzing",
+    "reading",
+    "processing",
+    "Generating",
+}
+```
+
+**Prompt patterns (idle/waiting):**
+
+```go
+var promptPatterns = []*regexp.Regexp{
+    regexp.MustCompile(`(?m)^[>$#%] ?$`),           // Common shell prompts
+    regexp.MustCompile(`(?m)^claude[>:] ?$`),       // Claude prompt
+    regexp.MustCompile(`(?m)^\(.*\)[>$] ?$`),       // Virtualenv prompts
+}
+```
+
+**Error patterns:**
+
+```go
+var errorPatterns = []string{
+    "error:",
+    "Error:",
+    "ERROR",
+    "panic:",
+    "Traceback",
+    "Exception:",
+}
+```
+
+## Test Cases
+
+| Pane Content (last lines) | Expected Status |
+|---------------------------|-----------------|
+| `⠋ Thinking...` | thinking |
+| `> ` | idle |
+| `$ ` | idle |
+| `claude> ` | idle |
+| `Running tests...` | executing |
+| `error: command not found` | executing (output, not a crash) |
+| `panic: runtime error` | error |
+| (empty) | unknown |
+
 ## tmux Notifications
 
 Codely updates tmux `status-right` with a segment like:
 
-```
+```text
 Codely: [1] api/claude [2] web/opencode ! db/codex
 ```
 

@@ -16,6 +16,17 @@ Alternatively, install manually:
 - tmux
 - golangci-lint v2 (`brew install golangci-lint` on macOS, or see [install docs](https://golangci-lint.run/docs/welcome/install/))
 
+### External Tools
+
+| Tool | Required | Purpose |
+|------|----------|---------|
+| tmux | Yes | Terminal multiplexing |
+| shed | No | Remote container management |
+| claude | No | Claude Code AI assistant |
+| opencode | No | OpenCode AI assistant |
+| codex | No | Codex AI assistant |
+| lazygit | No | Git terminal UI |
+
 ## Build
 
 ```bash

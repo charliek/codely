@@ -501,4 +501,3 @@ func (m Model) helpLine() string {
 func (m Model) versionString() string {
 	return "  v0.1"
 }
-

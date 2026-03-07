@@ -45,9 +45,9 @@ type Model struct {
 	shed   shed.Client
 
 	// UI state
-	mode Mode
-	skin Skin
-	keys KeyMap
+	mode     Mode
+	skin     Skin
+	keys     KeyMap
 	help     help.Model
 	width    int
 	height   int
@@ -148,8 +148,8 @@ func NewModel(cfg *config.Config, store *store.Store, tmuxClient tmux.Client, sh
 		tmux:           tmuxClient,
 		shed:           shedClient,
 		mode:           ModeNormal,
-		skin: skin,
-		keys: keys,
+		skin:           skin,
+		keys:           keys,
 		help:           help.New(),
 		commands:       commands,
 		commandKeys:    commandKeys,

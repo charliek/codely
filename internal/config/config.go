@@ -37,6 +37,7 @@ type UIConfig struct {
 	StatusPollInterval string `yaml:"status_poll_interval"`
 	ShowDirectory      bool   `yaml:"show_directory"`
 	AutoExpandProjects bool   `yaml:"auto_expand_projects"`
+	Skin               string `yaml:"skin"`
 }
 
 // ShedConfig represents shed integration settings

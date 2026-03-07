@@ -6,7 +6,6 @@ import (
 	"github.com/charliek/codely/internal/shed"
 	"github.com/charliek/codely/internal/store"
 	"github.com/charliek/codely/internal/tmux"
-	"github.com/charliek/codely/internal/tui/components"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/textinput"
 )
@@ -47,7 +46,8 @@ type Model struct {
 
 	// UI state
 	mode     Mode
-	tree     *components.Tree
+	skin     Skin
+	skinName SkinName
 	keys     KeyMap
 	help     help.Model
 	width    int
@@ -107,16 +107,18 @@ type Model struct {
 }
 
 // NewModel creates a new application model
-func NewModel(cfg *config.Config, store *store.Store, tmuxClient tmux.Client, shedClient shed.Client, codelyPaneID int, codelyWindowID string) *Model {
-	// Build tree from stored projects
-	tree := components.NewTree(store.Projects())
+func NewModel(cfg *config.Config, store *store.Store, tmuxClient tmux.Client, shedClient shed.Client, codelyPaneID int, codelyWindowID string, skinName SkinName) *Model {
+	keys := DefaultKeyMap()
+
+	// Build skin from stored projects
+	skin := NewSkin(skinName, store.Projects(), cfg, keys)
 
 	// Expand all projects by default if configured
 	if cfg.UI.AutoExpandProjects {
-		for _, p := range tree.Projects() {
+		for _, p := range store.Projects() {
 			p.Expanded = true
 		}
-		tree.Flatten()
+		skin.Flatten()
 	}
 
 	// Set up folder search input
@@ -148,8 +150,9 @@ func NewModel(cfg *config.Config, store *store.Store, tmuxClient tmux.Client, sh
 		tmux:           tmuxClient,
 		shed:           shedClient,
 		mode:           ModeNormal,
-		tree:           tree,
-		keys:           DefaultKeyMap(),
+		skin:           skin,
+		skinName:       skinName,
+		keys:           keys,
 		help:           help.New(),
 		commands:       commands,
 		commandKeys:    commandKeys,
@@ -165,24 +168,15 @@ func NewModel(cfg *config.Config, store *store.Store, tmuxClient tmux.Client, sh
 
 // SelectedProject returns the currently selected project (if any)
 func (m *Model) SelectedProject() *domain.Project {
-	item := m.tree.Selected()
-	if item == nil {
-		return nil
-	}
-	return item.Project
+	return m.skin.SelectedProject()
 }
 
 // SelectedSession returns the currently selected session (if any)
 func (m *Model) SelectedSession() *domain.Session {
-	item := m.tree.Selected()
-	if item == nil || item.Type != components.ItemTypeSession {
-		return nil
-	}
-	return item.Session
+	return m.skin.SelectedSession()
 }
 
 // IsSessionSelected returns true if a session is currently selected
 func (m *Model) IsSessionSelected() bool {
-	item := m.tree.Selected()
-	return item != nil && item.Type == components.ItemTypeSession
+	return m.skin.IsSessionSelected()
 }

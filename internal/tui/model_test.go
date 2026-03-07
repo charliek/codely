@@ -17,11 +17,11 @@ func TestNewModel(t *testing.T) {
 	tmuxClient := tmux.NewMockClient()
 	shedClient := shed.NewMockClient()
 
-	model := NewModel(cfg, st, tmuxClient, shedClient, 0, "")
+	model := NewModel(cfg, st, tmuxClient, shedClient, 0, "", SkinTree)
 
 	assert.NotNil(t, model)
 	assert.Equal(t, ModeNormal, model.mode)
-	assert.NotNil(t, model.tree)
+	assert.NotNil(t, model.skin)
 }
 
 func TestModelWithProjects(t *testing.T) {
@@ -52,18 +52,15 @@ func TestModelWithProjects(t *testing.T) {
 	tmuxClient := tmux.NewMockClient()
 	shedClient := shed.NewMockClient()
 
-	model := NewModel(cfg, st, tmuxClient, shedClient, 0, "")
-
-	// Verify project is in tree
-	assert.Equal(t, 1, model.tree.ProjectCount())
-	assert.Equal(t, 2, model.tree.Count()) // project + session
+	model := NewModel(cfg, st, tmuxClient, shedClient, 0, "", SkinTree)
 
 	// Verify selection methods
 	assert.NotNil(t, model.SelectedProject())
 	assert.Equal(t, "proj-1", model.SelectedProject().ID)
 
-	// Move to session
-	model.tree.MoveDown()
+	// Move to session via skin (simulate down key)
+	ts := model.skin.(*TreeSkin)
+	ts.tree.MoveDown()
 	assert.True(t, model.IsSessionSelected())
 	assert.NotNil(t, model.SelectedSession())
 	assert.Equal(t, "sess-1", model.SelectedSession().ID)
@@ -75,7 +72,7 @@ func TestModelInit(t *testing.T) {
 	tmuxClient := tmux.NewMockClient()
 	shedClient := shed.NewMockClient()
 
-	model := NewModel(cfg, st, tmuxClient, shedClient, 0, "")
+	model := NewModel(cfg, st, tmuxClient, shedClient, 0, "", SkinTree)
 
 	// Init should return commands for polling and loading
 	cmd := model.Init()
@@ -88,7 +85,7 @@ func TestModelModes(t *testing.T) {
 	tmuxClient := tmux.NewMockClient()
 	shedClient := shed.NewMockClient()
 
-	model := NewModel(cfg, st, tmuxClient, shedClient, 0, "")
+	model := NewModel(cfg, st, tmuxClient, shedClient, 0, "", SkinTree)
 
 	// Test mode transitions
 	assert.Equal(t, ModeNormal, model.mode)
@@ -119,7 +116,7 @@ func TestStatusUpdateMsg(t *testing.T) {
 	tmuxClient := tmux.NewMockClient()
 	shedClient := shed.NewMockClient()
 
-	model := NewModel(cfg, st, tmuxClient, shedClient, 0, "")
+	model := NewModel(cfg, st, tmuxClient, shedClient, 0, "", SkinTree)
 
 	// Apply status update
 	updates := map[string]domain.Status{

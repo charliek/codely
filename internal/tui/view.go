@@ -2,14 +2,13 @@ package tui
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/charliek/codely/internal/domain"
-	"github.com/charliek/codely/internal/tui/components"
+	"github.com/charliek/codely/internal/pathutil"
 )
 
 // View renders the current state
@@ -52,7 +51,7 @@ func (m Model) normalView() string {
 	b.WriteString("\n")
 
 	// Content area
-	content := m.treeView()
+	content := m.skin.View(&m)
 	b.WriteString(content)
 
 	// Error banner
@@ -77,154 +76,8 @@ func (m Model) normalView() string {
 	return body + "\n" + footer
 }
 
-// treeView renders the project tree
-func (m Model) treeView() string {
-	if m.tree.IsEmpty() {
-		return styleProjectPath.Render("\n  No projects yet. Press 'n' to create one.\n")
-	}
-
-	var b strings.Builder
-
-	// Separate local and shed projects
-	var localProjects, shedProjects []*domain.Project
-	for _, proj := range m.tree.Projects() {
-		if proj.Type == domain.ProjectTypeShed {
-			shedProjects = append(shedProjects, proj)
-		} else {
-			localProjects = append(localProjects, proj)
-		}
-	}
-
-	// Render LOCAL section
-	if len(localProjects) > 0 {
-		b.WriteString(styleSectionHeader.Render("LOCAL"))
-		b.WriteString("\n")
-	}
-
-	// Render items
-	selectedIdx := m.tree.SelectedIndex()
-	for i, item := range m.tree.Items() {
-		isSelected := i == selectedIdx
-		line := m.renderItem(item, isSelected)
-		b.WriteString(line)
-		b.WriteString("\n")
-
-		// Add SHEDS header before first shed project
-		if item.Type == components.ItemTypeProject &&
-			item.Project.Type == domain.ProjectTypeLocal &&
-			len(shedProjects) > 0 {
-			// Check if next item is a shed
-			if i+1 < len(m.tree.Items()) {
-				next := m.tree.Items()[i+1]
-				if next.Type == components.ItemTypeProject && next.Project.Type == domain.ProjectTypeShed {
-					b.WriteString("\n")
-					b.WriteString(styleSectionHeader.Render("SHEDS"))
-					b.WriteString("\n")
-				}
-			}
-		}
-	}
-
-	// If we only have shed projects, add header at the start
-	if len(localProjects) == 0 && len(shedProjects) > 0 {
-		var sb strings.Builder
-		sb.WriteString(styleSectionHeader.Render("SHEDS"))
-		sb.WriteString("\n")
-		sb.WriteString(b.String())
-		return sb.String()
-	}
-
-	return b.String()
-}
-
-// renderItem renders a single tree item
-func (m Model) renderItem(item components.TreeItem, selected bool) string {
-	var line string
-
-	if item.Type == components.ItemTypeProject {
-		line = m.renderProject(item.Project)
-	} else {
-		line = m.renderSession(item.Session)
-	}
-
-	if selected {
-		return styleSelected.Width(m.width - 2).Render(line)
-	}
-	return line
-}
-
-// renderProject renders a project row
-func (m Model) renderProject(proj *domain.Project) string {
-	// Expand/collapse indicator
-	indicator := "▶"
-	if proj.Expanded {
-		indicator = "▼"
-	}
-
-	// Session count for collapsed
-	countStr := ""
-	if !proj.Expanded && len(proj.Sessions) > 0 {
-		countStr = fmt.Sprintf(" (%d sessions)", len(proj.Sessions))
-	}
-
-	// Stopped indicator for shed projects
-	stoppedStr := ""
-	if proj.Type == domain.ProjectTypeShed {
-		// Check if shed is stopped
-		for _, s := range m.sheds {
-			if s.Name == proj.ShedName && s.Status == "stopped" {
-				stoppedStr = " ⏸️ stopped"
-				break
-			}
-		}
-	}
-
-	name := styleProjectName.Render(proj.Name)
-	line := fmt.Sprintf("%s %s%s%s", indicator, name, countStr, stoppedStr)
-
-	// Add path on next line if expanded and showing directory
-	if proj.Expanded && m.config.UI.ShowDirectory {
-		path := proj.DisplayPath()
-		// Shorten home directory
-		home := homeDir()
-		if strings.HasPrefix(path, home) {
-			path = "~" + path[len(home):]
-		}
-		line = fmt.Sprintf("%s\n    %s", line, styleProjectPath.Render(path))
-	}
-
-	return line
-}
-
-// renderSession renders a session row
-func (m Model) renderSession(sess *domain.Session) string {
-	// Focus indicator
-	focusIndicator := "○"
-	if sess.IsVisible {
-		focusIndicator = "●"
-	}
-
-	// Status with icon
-	statusStr := sess.Status.Icon()
-	if sess.Status == domain.StatusError && sess.ExitCode != nil {
-		statusStr = fmt.Sprintf("%s (%d)", statusStr, *sess.ExitCode)
-	}
-	statusStyled := m.styleStatus(sess.Status).Render(statusStr)
-
-	name := sess.Command.DisplayName
-	if name == "" {
-		name = sess.Command.ID
-	}
-
-	return fmt.Sprintf("    %s %s%s%s",
-		focusIndicator,
-		styleSessionName.Render(name),
-		strings.Repeat(" ", 14-len(name)), // Padding for alignment
-		statusStyled)
-}
-
-// styleStatus returns the appropriate style for a status
-func (m Model) styleStatus(status domain.Status) lipgloss.Style {
+// styleStatus returns the appropriate style for a status (package-level for use by all skins)
+func styleStatus(status domain.Status) lipgloss.Style {
 	switch status {
 	case domain.StatusIdle:
 		return styleStatusIdle
@@ -269,12 +122,7 @@ func (m Model) folderPickerView() string {
 
 	idx := 0
 	for _, parent := range groupOrder {
-		// Shorten home directory
-		displayParent := parent
-		home := homeDir()
-		if strings.HasPrefix(displayParent, home) {
-			displayParent = "~" + displayParent[len(home):]
-		}
+		displayParent := pathutil.ContractHome(parent)
 
 		b.WriteString(styleProjectPath.Render(displayParent + "/"))
 		b.WriteString("\n")
@@ -574,10 +422,7 @@ func (m Model) confirmView() string {
 		sessionName := "unknown"
 		projName := "unknown"
 		if m.confirmSession != nil {
-			sessionName = m.confirmSession.Command.DisplayName
-			if sessionName == "" {
-				sessionName = m.confirmSession.Command.ID
-			}
+			sessionName = m.confirmSession.Command.Name()
 		}
 		if m.confirmProject != nil {
 			projName = m.confirmProject.Name
@@ -655,10 +500,4 @@ func (m Model) helpLine() string {
 // versionString returns the version string for the header
 func (m Model) versionString() string {
 	return "  v0.1"
-}
-
-// homeDir returns the user's home directory
-func homeDir() string {
-	home, _ := os.UserHomeDir()
-	return home
 }

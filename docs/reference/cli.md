@@ -15,6 +15,7 @@ codely [flags]
 | `--config` | `-c` | `~/.config/codely/config.yaml` | Path to configuration file |
 | `--debug` | `-d` | `false` | Enable debug logging to file |
 | `--debug-file` | | `~/.local/state/codely/debug.log` | Debug log file path |
+| `--skin` | | `tree` | UI skin: `tree` or `flat` (overrides config) |
 | `--version` | `-v` | | Print version and exit |
 | `--help` | `-h` | | Print help and exit |
 
@@ -32,6 +33,9 @@ codely --debug
 
 # Debug logging to a specific file
 codely --debug --debug-file /tmp/codely-debug.log
+
+# Use the flat card skin
+codely --skin flat
 
 # Print version
 codely --version

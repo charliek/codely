@@ -64,3 +64,11 @@ type Command struct {
 	Args        []string          `json:"args"`         // Arguments
 	Env         map[string]string `json:"env"`          // Environment variables
 }
+
+// Name returns DisplayName if set, otherwise ID.
+func (c Command) Name() string {
+	if c.DisplayName != "" {
+		return c.DisplayName
+	}
+	return c.ID
+}

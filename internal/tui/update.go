@@ -9,7 +9,6 @@ import (
 	"github.com/charliek/codely/internal/debug"
 	"github.com/charliek/codely/internal/domain"
 	"github.com/charliek/codely/internal/shed"
-	"github.com/charliek/codely/internal/tui/components"
 )
 
 // Init initializes the model
@@ -243,6 +242,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // handleNormalKey handles keys in normal mode
 func (m Model) handleNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Try skin-specific navigation first (up/down/left/right/space)
+	if handled, cmd := m.skin.HandleKey(&m, msg); handled {
+		return m, cmd
+	}
+
 	switch {
 	case key.Matches(msg, m.keys.Quit):
 		// Save state before quitting
@@ -257,28 +261,8 @@ func (m Model) handleNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case key.Matches(msg, m.keys.Up):
-		m.tree.MoveUp()
-		return m, nil
-
-	case key.Matches(msg, m.keys.Down):
-		m.tree.MoveDown()
-		return m, nil
-
-	case key.Matches(msg, m.keys.Left):
-		m.tree.Collapse()
-		return m, nil
-
-	case key.Matches(msg, m.keys.Right):
-		m.tree.Expand()
-		return m, nil
-
 	case key.Matches(msg, m.keys.Enter):
 		return m.handleEnter()
-
-	case key.Matches(msg, m.keys.Space):
-		m.tree.Toggle()
-		return m, nil
 
 	case key.Matches(msg, m.keys.NewProject):
 		// Show project type selector if shed is available
@@ -330,40 +314,42 @@ func (m Model) handleNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // handleEnter processes Enter key in normal mode
 func (m Model) handleEnter() (tea.Model, tea.Cmd) {
-	item := m.tree.Selected()
-	if item == nil {
+	proj := m.skin.SelectedProject()
+	sess := m.skin.SelectedSession()
+
+	if proj == nil {
 		return m, nil
 	}
 
-	if item.Type == components.ItemTypeSession {
-		if item.Session.Status == domain.StatusExited {
-			_ = m.store.RemoveSession(item.Project.ID, item.Session.ID)
+	if m.skin.IsSessionSelected() && sess != nil {
+		if sess.Status == domain.StatusExited {
+			_ = m.store.RemoveSession(proj.ID, sess.ID)
 			_ = m.store.Save()
-			m.tree.SetProjects(m.store.Projects())
+			m.skin.SetProjects(m.store.Projects())
 			return m, nil
 		}
 
 		// Check if session has a pane
-		if item.Session.PaneID == 0 {
+		if sess.PaneID == 0 {
 			return m, nil
 		}
 
 		// If session is already visible, just focus it
-		if item.Session.IsVisible {
-			return m, m.focusPaneCmd(item.Session.PaneID)
+		if sess.IsVisible {
+			return m, m.focusPaneCmd(sess.PaneID)
 		}
 
 		// Session is hidden - need to swap panes
 		// Find the currently visible session globally
 		var visibleSession *domain.Session
 		var visibleProject *domain.Project
-		for _, proj := range m.store.Projects() {
-			for i := range proj.Sessions {
-				sess := &proj.Sessions[i]
-				if sess.ID != item.Session.ID && sess.PaneID > 0 && sess.IsVisible &&
-					sess.Status != domain.StatusExited && sess.Status != domain.StatusError {
-					visibleSession = sess
-					visibleProject = proj
+		for _, p := range m.store.Projects() {
+			for i := range p.Sessions {
+				s := &p.Sessions[i]
+				if s.ID != sess.ID && s.PaneID > 0 && s.IsVisible &&
+					s.Status != domain.StatusExited && s.Status != domain.StatusError {
+					visibleSession = s
+					visibleProject = p
 					break
 				}
 			}
@@ -373,50 +359,50 @@ func (m Model) handleEnter() (tea.Model, tea.Cmd) {
 		}
 
 		if visibleSession != nil {
-			// Swap panes: hide visible, show hidden
-			return m, m.swapPanesCmd(item.Project, item.Session, visibleProject, visibleSession)
+			return m, m.swapPanesCmd(proj, sess, visibleProject, visibleSession)
 		}
 
-		// No visible session to hide; just show this pane in the main window
-		return m, m.showPaneCmd(item.Project, item.Session)
+		return m, m.showPaneCmd(proj, sess)
 	}
 
 	// Toggle project expand/collapse
-	m.tree.Toggle()
+	m.skin.ToggleProject()
 	return m, nil
 }
 
 // handleClose processes close action
 func (m Model) handleClose() (tea.Model, tea.Cmd) {
-	item := m.tree.Selected()
-	if item == nil {
+	proj := m.skin.SelectedProject()
+	sess := m.skin.SelectedSession()
+
+	if proj == nil {
 		return m, nil
 	}
 
-	if item.Type == components.ItemTypeSession {
-		if item.Session.PaneID == 0 || !m.tmux.PaneExists(item.Session.PaneID) {
-			_ = m.store.RemoveSession(item.Project.ID, item.Session.ID)
+	if m.skin.IsSessionSelected() && sess != nil {
+		if sess.PaneID == 0 || !m.tmux.PaneExists(sess.PaneID) {
+			_ = m.store.RemoveSession(proj.ID, sess.ID)
 			_ = m.store.Save()
-			m.tree.SetProjects(m.store.Projects())
+			m.skin.SetProjects(m.store.Projects())
 			return m, nil
 		}
 
 		// Confirm closing session
 		m.confirmAction = ConfirmCloseSession
-		m.confirmProject = item.Project
-		m.confirmSession = item.Session
+		m.confirmProject = proj
+		m.confirmSession = sess
 		m.mode = ModeConfirm
 	} else {
 		// If project has sessions, confirm first
-		if len(item.Project.Sessions) > 0 {
+		if len(proj.Sessions) > 0 {
 			m.confirmAction = ConfirmCloseProject
-			m.confirmProject = item.Project
+			m.confirmProject = proj
 			m.mode = ModeConfirm
 		} else {
 			// No sessions, just remove project
-			_ = m.store.RemoveProject(item.Project.ID)
+			_ = m.store.RemoveProject(proj.ID)
 			_ = m.store.Save()
-			m.tree.SetProjects(m.store.Projects())
+			m.skin.SetProjects(m.store.Projects())
 		}
 	}
 
@@ -446,7 +432,7 @@ func (m Model) handleCloseAll() (tea.Model, tea.Cmd) {
 	} else {
 		_ = m.store.RemoveProject(proj.ID)
 		_ = m.store.Save()
-		m.tree.SetProjects(m.store.Projects())
+		m.skin.SetProjects(m.store.Projects())
 	}
 
 	return m, nil
@@ -572,12 +558,11 @@ func (m Model) handleCommandPickerKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Add to store
 		_ = m.store.AddSession(proj.ID, session)
 		_ = m.store.Save()
-		m.tree.SetProjects(m.store.Projects())
 
-		// Select the new session
+		// Expand the project before rebuilding so new session is visible
 		proj.Expanded = true
-		m.tree.Flatten()
-		m.tree.SelectBySessionID(proj.ID, session.ID)
+		m.skin.SetProjects(m.store.Projects())
+		m.skin.SelectBySessionID(proj.ID, session.ID)
 
 		m.pendingProject = nil
 		return m, m.createPaneCmd(proj, session)
@@ -771,7 +756,7 @@ func (m Model) handleShedCloseKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 		_ = m.store.Save()
-		m.tree.SetProjects(m.store.Projects())
+		m.skin.SetProjects(m.store.Projects())
 		m.mode = ModeNormal
 		m.confirmProject = nil
 
@@ -863,7 +848,7 @@ func (m Model) executeConfirmedAction() (tea.Model, tea.Cmd) {
 			cmds = append(cmds, m.killPaneCmd(m.confirmProject, m.confirmSession))
 			_ = m.store.RemoveSession(m.confirmProject.ID, m.confirmSession.ID)
 			_ = m.store.Save()
-			m.tree.SetProjects(m.store.Projects())
+			m.skin.SetProjects(m.store.Projects())
 		}
 
 	case ConfirmCloseProject:
@@ -876,7 +861,7 @@ func (m Model) executeConfirmedAction() (tea.Model, tea.Cmd) {
 			}
 			_ = m.store.RemoveProject(m.confirmProject.ID)
 			_ = m.store.Save()
-			m.tree.SetProjects(m.store.Projects())
+			m.skin.SetProjects(m.store.Projects())
 		}
 
 	case ConfirmDeleteShed:
@@ -889,7 +874,7 @@ func (m Model) executeConfirmedAction() (tea.Model, tea.Cmd) {
 			}
 			_ = m.store.RemoveProject(m.confirmProject.ID)
 			_ = m.store.Save()
-			m.tree.SetProjects(m.store.Projects())
+			m.skin.SetProjects(m.store.Projects())
 			cmds = append(cmds, m.deleteShedCmd(m.confirmProject.ShedName, true))
 		}
 	}
@@ -938,8 +923,8 @@ func (m *Model) applyExitCodeUpdates(codes map[string]*int) {
 func (m *Model) handleProjectCreated(proj *domain.Project) {
 	_ = m.store.AddProject(proj)
 	_ = m.store.Save()
-	m.tree.SetProjects(m.store.Projects())
-	m.tree.SelectByProjectID(proj.ID)
+	m.skin.SetProjects(m.store.Projects())
+	m.skin.SelectByProjectID(proj.ID)
 	m.pendingProject = proj
 }
 
@@ -991,7 +976,7 @@ func (m *Model) handlePaneCreated(msg PaneCreatedMsg) {
 		}
 	}
 	_ = m.store.Save()
-	m.tree.SetProjects(m.store.Projects())
+	m.skin.SetProjects(m.store.Projects())
 }
 
 func (m *Model) handlePaneKilled(msg PaneKilledMsg) {
@@ -1031,7 +1016,7 @@ func (m *Model) handlePaneSwapped(msg PaneSwappedMsg) {
 			}
 		}
 	}
-	m.tree.SetProjects(m.store.Projects())
+	m.skin.SetProjects(m.store.Projects())
 }
 
 func (m *Model) handleVisibilitySynced(msg VisibilitySyncedMsg) {
@@ -1041,7 +1026,7 @@ func (m *Model) handleVisibilitySynced(msg VisibilitySyncedMsg) {
 			p.Sessions[i].IsVisible = p.Sessions[i].ID == msg.VisibleSessionID
 		}
 	}
-	m.tree.SetProjects(m.store.Projects())
+	m.skin.SetProjects(m.store.Projects())
 }
 
 func (m *Model) filteredFolders() []string {

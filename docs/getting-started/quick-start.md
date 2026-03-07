@@ -41,6 +41,16 @@ Codely splits a new tmux pane, starts your command in the selected directory, an
 
 With a project selected in the tree, press `t` to add another terminal session. Each session runs independently in its own tmux pane.
 
+## Choose a Skin
+
+Codely ships with two UI skins. The default `tree` skin shows a hierarchical project/session view. The `flat` skin shows projects as scrollable cards.
+
+```bash
+codely --skin flat
+```
+
+You can also set the default skin in your config file under `ui.skin`.
+
 ## Navigate the Tree
 
 | Key | Action |

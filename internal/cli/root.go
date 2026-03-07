@@ -20,6 +20,7 @@ var (
 	configPath string
 	debugMode  bool
 	debugFile  string
+	skinFlag   string
 )
 
 // rootCmd represents the base command
@@ -51,6 +52,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", constants.DefaultConfigPath, "Config file path")
 	rootCmd.PersistentFlags().BoolVarP(&debugMode, "debug", "d", false, "Enable debug logging to file")
 	rootCmd.PersistentFlags().StringVar(&debugFile, "debug-file", "~/.local/state/codely/debug.log", "Debug log file path")
+	rootCmd.PersistentFlags().StringVar(&skinFlag, "skin", "", "UI skin: tree or flat (default from config or \"tree\")")
 
 	// Set version template
 	rootCmd.SetVersionTemplate("codely version {{.Version}}\n")
@@ -69,6 +71,15 @@ func runApp(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Resolve skin: CLI flag overrides config, default to "tree"
+	skin := tui.SkinName(cfg.UI.Skin)
+	if skinFlag != "" {
+		skin = tui.SkinName(skinFlag)
+	}
+	if skin == "" {
+		skin = tui.SkinTree
+	}
+
 	// Run TUI
-	return tui.Run(cfg, constants.DefaultStatePath, debugMode, debugFile)
+	return tui.Run(cfg, constants.DefaultStatePath, debugMode, debugFile, skin)
 }

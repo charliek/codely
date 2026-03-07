@@ -94,8 +94,10 @@ nav:
       - CLI: reference/cli.md
       - Configuration: reference/configuration.md
       - TUI: reference/tui.md
+      - Status Detection: reference/status-detection.md
   - Development:
       - Setup: development/setup.md
+      - Architecture: development/architecture.md
 
 extra:
   social:

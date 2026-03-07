@@ -16,7 +16,7 @@ import (
 )
 
 // Run starts the TUI application
-func Run(cfg *config.Config, storePath string, debugMode bool, debugFile string) error {
+func Run(cfg *config.Config, storePath string, debugMode bool, debugFile string, skinName SkinName) error {
 	if debugMode {
 		if err := debug.Enable(debugFile); err != nil {
 			return fmt.Errorf("enabling debug log: %w", err)
@@ -87,7 +87,7 @@ func Run(cfg *config.Config, storePath string, debugMode bool, debugFile string)
 	debug.Log("startup: TMUX_PANE=%s codelyPaneID=%d codelyWindowID=%s", os.Getenv("TMUX_PANE"), codelyPaneID, codelyWindowID)
 
 	// Create model
-	model := NewModel(cfg, st, tmuxClient, shedClient, codelyPaneID, codelyWindowID)
+	model := NewModel(cfg, st, tmuxClient, shedClient, codelyPaneID, codelyWindowID, skinName)
 
 	// Resize the manager pane if possible
 	if cfg.UI.ManagerWidth > 0 && codelyPaneID >= 0 {

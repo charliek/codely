@@ -37,6 +37,7 @@ type UIConfig struct {
 	StatusPollInterval string `yaml:"status_poll_interval"`
 	ShowDirectory      bool   `yaml:"show_directory"`
 	AutoExpandProjects bool   `yaml:"auto_expand_projects"`
+	Skin               string `yaml:"skin"`
 }
 
 // ShedConfig represents shed integration settings
@@ -147,6 +148,9 @@ func applyDefaults(config *Config) {
 	}
 	if config.UI.StatusPollInterval == "" {
 		config.UI.StatusPollInterval = constants.DefaultStatusPollInterval.String()
+	}
+	if config.UI.Skin == "" {
+		config.UI.Skin = "tree"
 	}
 	// ShowDirectory and AutoExpandProjects default to false (zero value)
 	// but we want them to default to true

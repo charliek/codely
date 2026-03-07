@@ -28,6 +28,9 @@ codely
 # Use a custom config file
 codely -c ~/my-config.yaml
 
+# Use the flat card skin
+codely --skin flat
+
 # Show version
 codely --version
 
@@ -41,8 +44,8 @@ Tip: Use tmux zoom (`prefix` + `z`) to toggle fullscreen for the active pane.
 
 Configuration file location: `~/.config/codely/config.yaml`
 
-See `docs/spec.md` for the full configuration schema.
-See `docs/status-detection.md` for status values, auto-detection, and overrides.
+See the [Configuration docs](docs/reference/configuration.md) for the full schema.
+See the [Status Detection docs](docs/reference/status-detection.md) for status values, auto-detection, and overrides.
 
 ## Development
 

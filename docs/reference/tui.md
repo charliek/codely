@@ -31,26 +31,26 @@ The tree skin shows projects in a hierarchical view with expand/collapse navigat
 
 ### Flat Skin
 
-The flat skin shows projects as a scrollable list of cards. Each card displays the project name, path, session count, and per-session status.
+The flat skin shows a scrollable list of cards with one card per terminal/session. Projects without any sessions still appear as their own card so you can add the first terminal.
 
 ```text
 ┌──────────────────────────┐
 │ ╭────────────────────────╮│
-│ │ my-project             ││
+│ │ feature-x              ││
+│ │ Project: my-project    ││
 │ │ ~/projects/my-proj     ││
-│ │ 2 sessions  ● 1 active ││
-│ │ Claude Code 🤔  Bash 💤││
+│ │ ● visible  🤔          ││
 │ ╰────────────────────────╯│
 │ ╭────────────────────────╮│
-│ │ other-proj             ││
-│ │ ~/work/other-proj      ││
-│ │ 1 session              ││
-│ │ Claude Code 💤         ││
+│ │ Bash Shell             ││
+│ │ Project: my-project    ││
+│ │ ~/projects/my-proj     ││
+│ │ ○ hidden  💤           ││
 │ ╰────────────────────────╯│
 └──────────────────────────┘
 ```
 
-Navigation in the flat skin uses up/down only (no expand/collapse). Left, right, and space are no-ops. Enter on a project toggles its expanded state; all other actions (new project, terminal, close) work the same.
+Navigation in the flat skin uses up/down only (no expand/collapse). Left, right, and space are no-ops. Enter focuses the selected session card, and project actions such as add terminal or close project still apply to the session's parent project.
 
 ### Selection States
 
@@ -88,7 +88,7 @@ The tree skin supports three selection states:
 │  │                      │  │                                        │ │
 │  │                      │  │                                        │ │
 │  ├──────────────────────┤  │                                        │ │
-│  │ [n]ew [t]erm [x]close│  │                                        │ │
+│  │ [n]ew [t]erm [r]ename│  │                                        │ │
 │  └──────────────────────┘  └────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────────────┘
 ```
@@ -228,7 +228,8 @@ Use tmux zoom (`prefix` + `z`) to toggle fullscreen on the active pane.
 |-----|--------|
 | `q` / `Ctrl+c` | Quit codely |
 | `?` | Toggle help overlay |
-| `r` | Refresh status and shed list |
+| `r` | Rename selected session |
+| `R` / `Ctrl+r` | Refresh status and shed list |
 
 ### Navigation (skin-specific)
 
@@ -249,6 +250,7 @@ These keys are handled by the active skin:
 | `Enter` | Focus session pane (session) / toggle expand (project, tree skin only) |
 | `n` | New project |
 | `t` | Add terminal to selected project |
+| `r` | Rename selected session |
 | `x` | Close selected session |
 | `X` | Close selected project and all sessions |
 | `s` | Stop shed (shed projects) |

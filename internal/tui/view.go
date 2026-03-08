@@ -24,6 +24,8 @@ func (m Model) View() string {
 		return m.folderPickerView()
 	case ModeCommandPicker:
 		return m.commandPickerView()
+	case ModeRename:
+		return m.renameView()
 	case ModeShedPicker:
 		return m.shedPickerView()
 	case ModeShedCreate:
@@ -202,6 +204,38 @@ func (m Model) commandPickerView() string {
 	}
 
 	b.WriteString(styleHelp.Render("[enter] launch  [esc] back"))
+
+	return styleDialog.Render(b.String())
+}
+
+// renameView renders the session rename dialog.
+func (m Model) renameView() string {
+	var b strings.Builder
+
+	proj, sess := m.renameTarget()
+	sessionName := "Unknown"
+	projectName := "Unknown"
+	projectPath := ""
+	if sess != nil {
+		sessionName = sess.Command.Name()
+	}
+	if proj != nil {
+		projectName = proj.Name
+		projectPath = proj.DisplayPath()
+	}
+
+	b.WriteString(styleDialogTitle.Render("Rename Session"))
+	b.WriteString("\n\n")
+	fmt.Fprintf(&b, "Session: %s\n", styleSessionName.Render(sessionName))
+	fmt.Fprintf(&b, "Project: %s\n", styleProjectName.Render(projectName))
+	if projectPath != "" {
+		fmt.Fprintf(&b, "Path: %s\n", styleProjectPath.Render(projectPath))
+	}
+	b.WriteString("\n")
+	b.WriteString("New name:\n")
+	b.WriteString(m.renameInput.View())
+	b.WriteString("\n\n")
+	b.WriteString(styleHelp.Render("[enter] save  [esc] cancel  [blank] reset default name"))
 
 	return styleDialog.Render(b.String())
 }
@@ -494,7 +528,7 @@ func (m Model) helpView() string {
 
 // helpLine returns the footer help text
 func (m Model) helpLine() string {
-	return "[n]ew project [t]erminal [x]close [q]uit"
+	return "[n]ew project [t]erminal [r]ename [x]close [q]uit"
 }
 
 // versionString returns the version string for the header

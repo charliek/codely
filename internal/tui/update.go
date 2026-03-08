@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -221,6 +222,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleFolderPickerKey(msg)
 	case ModeCommandPicker:
 		return m.handleCommandPickerKey(msg)
+	case ModeRename:
+		return m.handleRenameKey(msg)
 	case ModeShedPicker:
 		return m.handleShedPickerKey(msg)
 	case ModeShedCreate:
@@ -285,6 +288,9 @@ func (m Model) handleNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case key.Matches(msg, m.keys.Rename):
+		return m.startRenameSession()
+
 	case key.Matches(msg, m.keys.Close):
 		return m.handleClose()
 
@@ -310,6 +316,41 @@ func (m Model) handleNormalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// handleRenameKey handles keys in the rename dialog.
+func (m Model) handleRenameKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.clearRenameState()
+		m.mode = ModeNormal
+		return m, nil
+	case tea.KeyEnter:
+		proj, sess := m.renameTarget()
+		if proj == nil || sess == nil {
+			m.clearRenameState()
+			m.mode = ModeNormal
+			return m, nil
+		}
+
+		name := strings.TrimSpace(m.renameInput.Value())
+		if name == "" {
+			name = m.defaultSessionName(sess)
+		}
+
+		sess.Command.DisplayName = name
+		_ = m.store.Save()
+		m.skin.SetProjects(m.store.Projects())
+		m.skin.SelectBySessionID(proj.ID, sess.ID)
+		m.updateTmuxNotifications()
+		m.clearRenameState()
+		m.mode = ModeNormal
+		return m, nil
+	default:
+		var cmd tea.Cmd
+		m.renameInput, cmd = m.renameInput.Update(msg)
+		return m, cmd
+	}
 }
 
 // handleEnter processes Enter key in normal mode
@@ -1063,6 +1104,57 @@ func (m *Model) updateShedCreateFocus() {
 	case 1:
 		m.shedCreateRepo.Focus()
 	}
+}
+
+func (m Model) startRenameSession() (tea.Model, tea.Cmd) {
+	proj := m.SelectedProject()
+	sess := m.SelectedSession()
+	if proj == nil || sess == nil {
+		return m, nil
+	}
+
+	m.renameProjectID = proj.ID
+	m.renameSessionID = sess.ID
+	m.renameInput.SetValue(sess.Command.Name())
+	m.renameInput.Focus()
+	m.mode = ModeRename
+	return m, nil
+}
+
+func (m *Model) clearRenameState() {
+	m.renameProjectID = ""
+	m.renameSessionID = ""
+	m.renameInput.SetValue("")
+	m.renameInput.Blur()
+}
+
+func (m Model) renameTarget() (*domain.Project, *domain.Session) {
+	if m.renameProjectID == "" || m.renameSessionID == "" {
+		return nil, nil
+	}
+
+	proj, err := m.store.GetProject(m.renameProjectID)
+	if err != nil {
+		return nil, nil
+	}
+
+	for i := range proj.Sessions {
+		if proj.Sessions[i].ID == m.renameSessionID {
+			return proj, &proj.Sessions[i]
+		}
+	}
+
+	return proj, nil
+}
+
+func (m Model) defaultSessionName(sess *domain.Session) string {
+	if sess == nil {
+		return ""
+	}
+	if cmdCfg, ok := m.config.Commands[sess.Command.ID]; ok && cmdCfg.DisplayName != "" {
+		return cmdCfg.DisplayName
+	}
+	return sess.Command.ID
 }
 
 // shedCreateFieldCount returns the number of focusable fields in the shed create form.

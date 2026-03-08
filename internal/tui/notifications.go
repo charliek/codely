@@ -32,7 +32,7 @@ func (m *Model) collectNotificationItems() []notificationItem {
 			}
 			switch sess.Status {
 			case domain.StatusWaiting, domain.StatusError:
-				label := fmt.Sprintf("%s/%s", proj.Name, sess.Command.ID)
+				label := fmt.Sprintf("%s/%s", proj.Name, sess.Command.Name())
 				items = append(items, notificationItem{
 					label:  label,
 					paneID: sess.PaneID,

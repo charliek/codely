@@ -17,6 +17,7 @@ const (
 	ModeNormal Mode = iota
 	ModeFolderPicker
 	ModeCommandPicker
+	ModeRename
 	ModeShedPicker
 	ModeShedCreate
 	ModeShedCreating
@@ -63,6 +64,11 @@ type Model struct {
 	commands    []config.Command // Available commands
 	commandKeys []string         // Command IDs in order
 	commandIdx  int              // Selected command index
+
+	// Rename state
+	renameInput     textinput.Model
+	renameProjectID string
+	renameSessionID string
 
 	sheds   []shed.Shed // Available sheds
 	shedIdx int         // Selected shed index
@@ -134,6 +140,10 @@ func NewModel(cfg *config.Config, store *store.Store, tmuxClient tmux.Client, sh
 	shedCreateRepo.Placeholder = "user/repo (optional)"
 	shedCreateRepo.CharLimit = 100
 
+	renameInput := textinput.New()
+	renameInput.Placeholder = "Session name"
+	renameInput.CharLimit = 80
+
 	// Build commands list
 	var commands []config.Command
 	var commandKeys []string
@@ -154,6 +164,7 @@ func NewModel(cfg *config.Config, store *store.Store, tmuxClient tmux.Client, sh
 		commands:       commands,
 		commandKeys:    commandKeys,
 		folderSearch:   folderSearch,
+		renameInput:    renameInput,
 		shedCreateName: shedCreateName,
 		shedCreateRepo: shedCreateRepo,
 		codelyPaneID:   codelyPaneID,

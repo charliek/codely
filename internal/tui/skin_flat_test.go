@@ -62,3 +62,59 @@ func TestFlatSkinSelectBySessionID(t *testing.T) {
 	assert.Equal(t, "sess-2", skin.SelectedSession().ID)
 	assert.True(t, skin.IsSessionSelected())
 }
+
+func TestFlatSkinSetProjectsPreservesSelectionByID(t *testing.T) {
+	projects := []*domain.Project{
+		{
+			ID:   "proj-a",
+			Name: "alpha",
+			Sessions: []domain.Session{
+				{ID: "sess-1", ProjectID: "proj-a"},
+				{ID: "sess-2", ProjectID: "proj-a"},
+			},
+		},
+		{
+			ID:   "proj-b",
+			Name: "beta",
+			Sessions: []domain.Session{
+				{ID: "sess-3", ProjectID: "proj-b"},
+			},
+		},
+	}
+
+	skin := NewFlatSkin(projects, config.Default(), DefaultKeyMap())
+
+	// Select sess-3 (index 2)
+	skin.SelectBySessionID("proj-b", "sess-3")
+	require.Equal(t, "sess-3", skin.SelectedSession().ID)
+
+	// Reorder: put proj-b first
+	reordered := []*domain.Project{projects[1], projects[0]}
+	skin.SetProjects(reordered)
+
+	// Selection should still be sess-3 even though it moved to index 0
+	require.NotNil(t, skin.SelectedSession())
+	assert.Equal(t, "sess-3", skin.SelectedSession().ID)
+	assert.Equal(t, "proj-b", skin.SelectedProject().ID)
+	assert.Equal(t, 0, skin.selectedIdx)
+}
+
+func TestFlatSkinSetProjectsPreservesProjectSelection(t *testing.T) {
+	projects := []*domain.Project{
+		{ID: "proj-a", Name: "alpha"},
+		{ID: "proj-b", Name: "beta"},
+	}
+
+	skin := NewFlatSkin(projects, config.Default(), DefaultKeyMap())
+
+	// Select proj-b (index 1)
+	skin.SelectByProjectID("proj-b")
+	require.Equal(t, "proj-b", skin.SelectedProject().ID)
+
+	// Reorder
+	reordered := []*domain.Project{projects[1], projects[0]}
+	skin.SetProjects(reordered)
+
+	assert.Equal(t, "proj-b", skin.SelectedProject().ID)
+	assert.Equal(t, 0, skin.selectedIdx)
+}

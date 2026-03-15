@@ -32,7 +32,7 @@ func (m *Model) collectNotificationItems() []notificationItem {
 			}
 			switch sess.Status {
 			case domain.StatusWaiting, domain.StatusError:
-				label := fmt.Sprintf("%s/%s", proj.Name, sess.Command.Name())
+				label := escapeTmuxStatusText(fmt.Sprintf("%s/%s", proj.Name, sess.Command.Name()))
 				items = append(items, notificationItem{
 					label:  label,
 					paneID: sess.PaneID,
@@ -117,6 +117,15 @@ func (m *Model) updateJumpKeys(newKeys map[string]int) {
 		}
 	}
 	m.statusBarKeys = newKeys
+}
+
+// escapeTmuxStatusText escapes characters that have special meaning in tmux
+// status-right format strings. '#' triggers format interpretation (e.g. #(cmd)
+// executes a shell command), so we double it. Newlines are replaced with spaces.
+func escapeTmuxStatusText(s string) string {
+	s = strings.ReplaceAll(s, "#", "##")
+	s = strings.ReplaceAll(s, "\n", " ")
+	return strings.ReplaceAll(s, "\r", " ")
 }
 
 func stripStatusSegment(statusRight string) string {

@@ -177,8 +177,20 @@ func (s *FlatSkin) IsSessionSelected() bool {
 }
 
 func (s *FlatSkin) SetProjects(projects []*domain.Project) {
+	prevProject := s.SelectedProject()
+	prevSession := s.SelectedSession()
+
 	s.projects = projects
 	s.rebuildItems()
+
+	// Try to restore selection by ID
+	if prevSession != nil && prevProject != nil {
+		s.SelectBySessionID(prevProject.ID, prevSession.ID)
+	} else if prevProject != nil {
+		s.SelectByProjectID(prevProject.ID)
+	}
+
+	// Always clamp to valid bounds (covers case where restored ID no longer exists)
 	if s.selectedIdx >= len(s.items) {
 		s.selectedIdx = len(s.items) - 1
 	}

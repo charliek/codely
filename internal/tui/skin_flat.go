@@ -147,7 +147,7 @@ func (s *FlatSkin) HandleKey(m *Model, msg tea.KeyMsg) (bool, tea.Cmd) {
 		}
 		return true, nil
 	case key.Matches(msg, s.keys.Down):
-		if s.selectedIdx < len(s.projects)-1 {
+		if s.selectedIdx < len(s.items)-1 {
 			s.selectedIdx++
 		}
 		return true, nil

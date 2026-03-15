@@ -16,18 +16,26 @@ import (
 // FlatSkin renders projects as a scrollable list of cards.
 type FlatSkin struct {
 	projects    []*domain.Project
+	items       []flatCardItem
 	selectedIdx int
 	config      *config.Config
 	keys        KeyMap
 }
 
+type flatCardItem struct {
+	project *domain.Project
+	session *domain.Session
+}
+
 // NewFlatSkin creates a flat card skin.
 func NewFlatSkin(projects []*domain.Project, cfg *config.Config, keys KeyMap) *FlatSkin {
-	return &FlatSkin{
+	s := &FlatSkin{
 		projects: projects,
 		config:   cfg,
 		keys:     keys,
 	}
+	s.rebuildItems()
+	return s
 }
 
 var (
@@ -58,14 +66,14 @@ var (
 )
 
 func (s *FlatSkin) View(m *Model) string {
-	if len(s.projects) == 0 {
+	if len(s.items) == 0 {
 		return styleProjectPath.Render("\n  No projects yet. Press 'n' to create one.\n")
 	}
 
 	var b strings.Builder
 
-	for i, proj := range s.projects {
-		card := s.renderCard(m, proj)
+	for i, item := range s.items {
+		card := s.renderCard(m, item)
 		if i == s.selectedIdx {
 			b.WriteString(styleCardBorderSelected.Width(m.width - 4).Render(card))
 		} else {
@@ -77,48 +85,58 @@ func (s *FlatSkin) View(m *Model) string {
 	return b.String()
 }
 
-func (s *FlatSkin) renderCard(m *Model, proj *domain.Project) string {
+func (s *FlatSkin) renderCard(m *Model, item flatCardItem) string {
 	var b strings.Builder
+	proj := item.project
 
-	// Title line
-	b.WriteString(styleCardTitle.Render(proj.Name))
+	if item.session == nil {
+		b.WriteString(styleCardTitle.Render(proj.Name))
+		b.WriteString("\n")
+		b.WriteString("\n")
+		b.WriteString(styleCardPath.Render(pathutil.ContractHome(proj.DisplayPath())))
+		b.WriteString("\n")
+		b.WriteString(styleCardMeta.Render("No terminals yet"))
+		return b.String()
+	}
 
-	// Path
+	sess := item.session
+	b.WriteString(styleCardTitle.Render(sess.Command.Name()))
+	b.WriteString("\n")
+	b.WriteString(styleCardMeta.Render(fmt.Sprintf("Project: %s", proj.Name)))
 	b.WriteString("\n")
 	b.WriteString(styleCardPath.Render(pathutil.ContractHome(proj.DisplayPath())))
 
-	// Session summary
-	total := len(proj.Sessions)
-	active := 0
-	for _, sess := range proj.Sessions {
-		if sess.Status == domain.StatusThinking || sess.Status == domain.StatusExecuting || sess.Status == domain.StatusWaiting {
-			active++
-		}
+	statusStr := sess.Status.Icon()
+	if sess.Status == domain.StatusError && sess.ExitCode != nil {
+		statusStr = fmt.Sprintf("%s (%d)", statusStr, *sess.ExitCode)
 	}
 
-	if total > 0 {
-		b.WriteString("\n")
-		b.WriteString(styleCardMeta.Render(fmt.Sprintf("%d sessions", total)))
-		if active > 0 {
-			b.WriteString(styleCardMeta.Render("  "))
-			b.WriteString(styleCardActive.Render(fmt.Sprintf("● %d active", active)))
-		}
+	b.WriteString("\n")
+	if sess.IsVisible {
+		b.WriteString(styleCardActive.Render("● visible"))
+	} else {
+		b.WriteString(styleCardMeta.Render("○ hidden"))
 	}
-
-	// Session detail line
-	if total > 0 {
-		b.WriteString("\n")
-		var parts []string
-		for _, sess := range proj.Sessions {
-			name := sess.Command.Name()
-			icon := sess.Status.Icon()
-			styled := styleStatus(sess.Status).Render(icon)
-			parts = append(parts, fmt.Sprintf("%s %s", name, styled))
-		}
-		b.WriteString(strings.Join(parts, "  "))
-	}
+	b.WriteString(styleCardMeta.Render("  "))
+	b.WriteString(styleStatus(sess.Status).Render(statusStr))
 
 	return b.String()
+}
+
+func (s *FlatSkin) rebuildItems() {
+	s.items = s.items[:0]
+	for _, proj := range s.projects {
+		if len(proj.Sessions) == 0 {
+			s.items = append(s.items, flatCardItem{project: proj})
+			continue
+		}
+		for i := range proj.Sessions {
+			s.items = append(s.items, flatCardItem{
+				project: proj,
+				session: &proj.Sessions[i],
+			})
+		}
+	}
 }
 
 func (s *FlatSkin) HandleKey(m *Model, msg tea.KeyMsg) (bool, tea.Cmd) {
@@ -129,7 +147,7 @@ func (s *FlatSkin) HandleKey(m *Model, msg tea.KeyMsg) (bool, tea.Cmd) {
 		}
 		return true, nil
 	case key.Matches(msg, s.keys.Down):
-		if s.selectedIdx < len(s.projects)-1 {
+		if s.selectedIdx < len(s.items)-1 {
 			s.selectedIdx++
 		}
 		return true, nil
@@ -141,25 +159,40 @@ func (s *FlatSkin) HandleKey(m *Model, msg tea.KeyMsg) (bool, tea.Cmd) {
 }
 
 func (s *FlatSkin) SelectedProject() *domain.Project {
-	if len(s.projects) == 0 || s.selectedIdx < 0 || s.selectedIdx >= len(s.projects) {
+	if len(s.items) == 0 || s.selectedIdx < 0 || s.selectedIdx >= len(s.items) {
 		return nil
 	}
-	return s.projects[s.selectedIdx]
+	return s.items[s.selectedIdx].project
 }
 
 func (s *FlatSkin) SelectedSession() *domain.Session {
-	// Flat skin selects at project level, not session level
-	return nil
+	if len(s.items) == 0 || s.selectedIdx < 0 || s.selectedIdx >= len(s.items) {
+		return nil
+	}
+	return s.items[s.selectedIdx].session
 }
 
 func (s *FlatSkin) IsSessionSelected() bool {
-	return false
+	return s.SelectedSession() != nil
 }
 
 func (s *FlatSkin) SetProjects(projects []*domain.Project) {
+	prevProject := s.SelectedProject()
+	prevSession := s.SelectedSession()
+
 	s.projects = projects
-	if s.selectedIdx >= len(s.projects) {
-		s.selectedIdx = len(s.projects) - 1
+	s.rebuildItems()
+
+	// Try to restore selection by ID
+	if prevSession != nil && prevProject != nil {
+		s.SelectBySessionID(prevProject.ID, prevSession.ID)
+	} else if prevProject != nil {
+		s.SelectByProjectID(prevProject.ID)
+	}
+
+	// Always clamp to valid bounds (covers case where restored ID no longer exists)
+	if s.selectedIdx >= len(s.items) {
+		s.selectedIdx = len(s.items) - 1
 	}
 	if s.selectedIdx < 0 {
 		s.selectedIdx = 0
@@ -167,8 +200,8 @@ func (s *FlatSkin) SetProjects(projects []*domain.Project) {
 }
 
 func (s *FlatSkin) SelectByProjectID(id string) {
-	for i, p := range s.projects {
-		if p.ID == id {
+	for i, item := range s.items {
+		if item.project != nil && item.project.ID == id {
 			s.selectedIdx = i
 			return
 		}
@@ -176,7 +209,13 @@ func (s *FlatSkin) SelectByProjectID(id string) {
 }
 
 func (s *FlatSkin) SelectBySessionID(projectID, sessionID string) {
-	// Select the project containing this session
+	for i, item := range s.items {
+		if item.project != nil && item.project.ID == projectID &&
+			item.session != nil && item.session.ID == sessionID {
+			s.selectedIdx = i
+			return
+		}
+	}
 	s.SelectByProjectID(projectID)
 }
 

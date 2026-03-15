@@ -15,6 +15,7 @@ type KeyMap struct {
 	// Actions
 	NewProject  key.Binding
 	AddTerminal key.Binding
+	Rename      key.Binding
 	Close       key.Binding
 	CloseAll    key.Binding
 	StartShed   key.Binding
@@ -68,6 +69,10 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("t"),
 			key.WithHelp("t", "add terminal"),
 		),
+		Rename: key.NewBinding(
+			key.WithKeys("r"),
+			key.WithHelp("r", "rename"),
+		),
 		Close: key.NewBinding(
 			key.WithKeys("x"),
 			key.WithHelp("x", "close"),
@@ -85,8 +90,8 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("s", "stop shed"),
 		),
 		Refresh: key.NewBinding(
-			key.WithKeys("r"),
-			key.WithHelp("r", "refresh"),
+			key.WithKeys("R", "ctrl+r"),
+			key.WithHelp("R", "refresh"),
 		),
 		Confirm: key.NewBinding(
 			key.WithKeys("y"),
@@ -113,7 +118,7 @@ func DefaultKeyMap() KeyMap {
 
 // ShortHelp returns help for common keys
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.NewProject, k.AddTerminal, k.Close, k.Quit}
+	return []key.Binding{k.NewProject, k.AddTerminal, k.Rename, k.Close, k.Quit}
 }
 
 // FullHelp returns help for all keys
@@ -121,6 +126,7 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Left, k.Right},
 		{k.Enter, k.Space, k.NewProject, k.AddTerminal},
-		{k.Close, k.CloseAll, k.Refresh, k.Quit},
+		{k.Rename, k.Close, k.CloseAll, k.Refresh},
+		{k.StartShed, k.StopShed, k.Help, k.Quit},
 	}
 }
